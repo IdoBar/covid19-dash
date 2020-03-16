@@ -13,3 +13,5 @@ commit(repo, glue::glue("Updated website on {format(Sys.time(), '%c')}"))
 
 push(repo, "origin", "gh-pages")
 
+checkout(repo, "master", force = TRUE)
+
