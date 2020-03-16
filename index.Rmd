@@ -179,11 +179,11 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
         plot.margin = margin(1,1,1,4, "cm")) +
 
   transition_states(Date, transition_length = 4, state_length = 1) +
-  enter_grow() +  exit_shrink() + 
+  enter_grow() +  exit_fade() + 
   ease_aes('linear')
-  # ease_aes('cubic-in-out') 
+  # ease_aes('cubic-in-out')
 
-animate(p, fps = 25, duration = 20, width = 800, height = 600, end_pause = 10)
+# animate(p, fps = 25, duration = 20, width = 800, height = 600, end_pause = 10)
 ```
 
 
