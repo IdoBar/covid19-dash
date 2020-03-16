@@ -1,0 +1,171 @@
+---
+title: "Current Status of the Novel Corona Virus (Covid19) Pandemic Outbreak"
+output: 
+  flexdashboard::flex_dashboard:
+    vetical_layout: fill
+    orientation: rows
+    social: [ "twitter", "facebook", "menu" ]
+    source_code: embed
+
+---
+
+```{r setup, include=FALSE}
+pacman::p_load(flexdashboard, tidyverse, highcharter, readxl, httr, htmltools, rvest, kableExtra, DT, leaflet, leafpm)
+# download data from the EU
+# parse download link
+covid_eu_url <- read_html("https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide") %>% html_nodes("a") %>% html_attr("href") %>% .[grepl(".xls", .)] 
+# download the file to a temporary location
+GET(covid_eu_url, write_disk(tf <- tempfile(fileext = ".xls")))
+covid_data_eu <- readxl::read_excel(tf)
+# Download data from Josh Hopkins University (https://github.com/CSSEGISandData/COVID-19)
+process_csse_csv <- function(csvurl, datacol){
+  covid_data_csse <- read_csv(csvurl) %>% 
+  pivot_longer(cols = ends_with("/20"), names_to = "Date", values_to = datacol) %>% mutate(Date=as.Date(Date, "%m/%d/%y"))
+}
+csse_files <- c("Confirmed", "Deaths", "Recovered")
+covid_data_csse <- csse_files %>% map(~process_csse_csv(glue::glue("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-{.x}.csv"), .x)) %>% reduce(left_join) #%>%  mutate(Mortality_rate=Deaths/Confirmed)
+
+covid_data_who <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/who_covid_19_situation_reports/who_covid_19_sit_rep_time_series/who_covid_19_sit_rep_time_series.csv")
+
+latest_data <- covid_data_csse %>% group_by(`Province/State`, `Country/Region`) %>% arrange(desc(Date)) %>% 
+  slice(1) %>% ungroup()  
+```
+
+Row {data-height=120}
+-----------------------------------------------------------------------
+
+### Total Confirmed Cases
+
+```{r}
+valueBox(scales::comma(sum(latest_data$Confirmed, na.rm=TRUE)), icon = "fa-procedures", color="warning") # ion-fitness-outline fa-biohazard ion-medkit-outline ion-ios-medkit-outline
+```
+
+### Total Recovered Cases
+
+```{r}
+valueBox(scales::comma(sum(latest_data$Recovered, na.rm=TRUE)), icon = "ion-android-favorite-outline", color="success") # fa-briefcase-medical ion-ios-heart-outline
+```
+
+### Total Deaths
+
+```{r}
+valueBox(scales::comma(sum(latest_data$Deaths, na.rm=TRUE)), icon = "ion-heart-broken", color="danger") # ion-skull-outline, ion-pulse, 
+```
+
+
+### Mean Mortality Rate
+
+```{r}
+mort_rate <- sum(latest_data$Deaths, na.rm=TRUE)/sum(latest_data$Confirmed, na.rm=TRUE)
+gauge(scales::number(mort_rate*100, accuracy = .01), min = 0, max = 20, symbol = '%', gaugeSectors(
+  success = c(0, 2), warning = c(2, 5), danger = c(5,100)
+))
+
+# valueBox(scales::percent(mort_rate), icon = "ion-alert", 
+#          color=case_when(mort_rate>=0.03 ~ "danger", 
+#                          mort_rate>=0.02 & mort_rate<0.03~ "warning", 
+#                          mort_rate<0.02 ~"success")) # fa-briefcase-medical ion-ios-heart-outline ion-ios-information-outline ion-alert
+```
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### Map 
+
+```{r confirmed_map_leaflet}
+confirmed_cases_latest <- latest_data %>% filter(Confirmed>0) %>% 
+  mutate(name= ifelse(is.na(`Province/State`),`Country/Region`, glue::glue('{`Province/State`} ({`Country/Region`})')),
+         log_confirmed=log10(Confirmed),
+         popup_text=glue::glue('Province/Country: {name}<br/>Confirmed cases: {kableExtra::text_spec(scales::comma(Confirmed), background  = "gold")}<br/>Confirmed deaths: {kableExtra::text_spec(scales::comma(Deaths), background  = "orangered", color="white")} ({scales::percent(Deaths/Confirmed, accuracy=.1)})<br/>Confirmed recovered: {kableExtra::text_spec(scales::comma(Recovered), background  = "limegreen")}') %>% 
+           map(~HTML(.x)))  #%>% select(name,lat=  Lat, lon= Long, z=Confirmed)
+# Create the leaflet map
+leaflet(confirmed_cases_latest) %>% addProviderTiles(providers$CartoDB.Positron) %>% # Esri.WorldStreetMap providers$CartoDB.Positron
+  setView(lng = 72.1193378, lat = 9.5361877, zoom = 3) %>% # 16.7432979,29.195003,3z
+  addCircles(radius = ~(sqrt(Confirmed)*2500+50000), fillColor="#ff3030", stroke=FALSE, fillOpacity = 0.7,
+                   label = ~popup_text, labelOptions = labelOptions(textOnly = FALSE, textsize = "12px")) %>% 
+  # addMarkers(popup = ~Name, label = ~Name, 
+  #            icon = emojiIcons) %>% 
+  addScaleBar(position = "bottomright",
+              options = scaleBarOptions(imperial = FALSE)) %>%
+  addEasyButton(easyButton(
+    icon="fa-globe", title="Zoom out",
+    onClick=JS("function(btn, map){ map.setZoom(3); }"))) %>%
+  addEasyButton(easyButton(
+    icon="fa-crosshairs", title="Locate Me",
+    onClick=JS("function(btn, map){ map.locate({setView: true, maxZoom: 6}); }"))) # flyTo
+
+# hcmap("custom/world-palestine-highres", showInLegend = FALSE, fillcolour="#ff3030") %>% 
+#   hc_add_series(data = confirmed_cases_latest, fillcolour="#ff3030",
+#                 type = "mapbubble", name = "Confirmed Cases", maxSize = '15%') %>% 
+#   hc_mapNavigation(enabled = TRUE) %>% 
+#   hc_title(text = "Number of confirmed Covid19 cases by Province/State",
+#            margin = 40, align = "left",
+#            style = list(color = "#2b908f", useHTML = TRUE)) %>% 
+#   hc_subtitle(text = glue::glue("Data last updated on {format(max(latest_data$Date), '%d/%m/%Y')}"),
+#               align = "left",
+#               style = list(color = "#2b908f", fontWeight = "bold")) %>% 
+#   hc_exporting(enabled = TRUE) # enable exporting option
+```
+
+> Number of confirmed Covid19 cases by Province/Country (last updated on `r format(max(latest_data$Date), '%d/%m/%Y')`)
+
+<!-- ### Map -->
+
+<!-- ```{r confirmed_map} -->
+<!-- confirmed_cases_latest <- latest_data %>% filter(Confirmed>0) %>%  -->
+<!--   mutate(name= ifelse(is.na(`Province/State`),`Country/Region`, glue::glue('{`Province/State`} ({`Country/Region`})')), -->
+<!--          log_confirmed=log(Confirmed)) %>% select(name,lat=  Lat, lon= Long, z=Confirmed) -->
+<!-- hcmap("custom/world-palestine-highres", showInLegend = FALSE, fillcolour="#ff3030") %>%  -->
+<!--   hc_add_series(data = confirmed_cases_latest, fillcolour="#ff3030", -->
+<!--                 type = "mapbubble", name = "Confirmed Cases", maxSize = '15%') %>%  -->
+<!--   hc_mapNavigation(enabled = TRUE) %>%  -->
+<!--   hc_title(text = "Number of confirmed Covid19 cases by Province/State", -->
+<!--            margin = 40, align = "left", -->
+<!--            style = list(color = "#2b908f", useHTML = TRUE)) %>%  -->
+<!--   hc_subtitle(text = glue::glue("Data last updated on {format(max(latest_data$Date), '%d/%m/%Y')}"), -->
+<!--               align = "left", -->
+<!--               style = list(color = "#2b908f", fontWeight = "bold")) %>%  -->
+<!--   hc_exporting(enabled = TRUE) # enable exporting option -->
+<!-- ``` -->
+
+### Current Status Summary Table
+
+<!-- #### Current status of the Covid19 pandemic (updated on `r format(Sys.time(), "%c")`) -->
+
+```{r latest_report_table}
+tab_caption <- glue::glue("Current status of the Covid19 pandemic (data updated on {format(max(latest_data$Date), '%d/%m/%Y')})")
+latest_data %>% group_by(`Country/Region`) %>% summarise_at(c("Confirmed", "Deaths", "Recovered"), ~sum(.)) %>%  
+  mutate(Mortality_rate=Deaths/Confirmed) %>% 
+  arrange(desc(Confirmed)) %>% 
+  # select(`Country/Region`, Confirmed, Deaths, Recovered, Mortality_rate) %>% 
+  # mutate_at(c("Confirmed", "Deaths", "Recovered"), scales::comma) %>% 
+  # mutate(Mortality_rate=scales::percent(Mortality_rate, accuracy = .01)) %>% 
+  DT::datatable(., colnames = c("Mortality Rate"="Mortality_rate"), rownames = FALSE, 
+                style = 'bootstrap', class = 'table-bordered table-condensed', 
+                caption = tab_caption,# 
+                options = list(pageLength = 15,
+                columnDefs = list(list(className = 'dt-center', targets = 1:4)))
+                ) %>% formatStyle('Mortality Rate',
+  backgroundColor = styleInterval(c(0.01,0.04,0.07), c('limegreen',NA, 'gold', 'orangered'))) %>%  # 'orange', 'orangered', 'firebrick'
+  formatPercentage("Mortality Rate", digits = 2) %>% formatRound(c("Confirmed", "Deaths", "Recovered"), digits = 0)
+    
+
+```
+
+### Disease Progress timeline
+```{r bar_animation}
+cases_by_country <- covid_data_csse %>% group_by(`Country/Region`, Date) %>% 
+ summarise_at(c("Confirmed", "Deaths", "Recovered"), ~sum(., na.rm=TRUE)) %>%  
+  mutate(Mortality_rate=ifelse(Confirmed==0, 0, Deaths/Confirmed))
+# ggplot(cases_by_country, aes())
+```
+
+
+### Data Sources
+
+The information presented here is sourced from data collected from a range of sources by the Johns Hopkins University Center for Systems Science and Engineering (JHU CSSE) and hosted on their [GitHub repository](https://github.com/CSSEGISandData/COVID-19).
+
+This site was compiled on `r format(Sys.time(), '%c')` from data last updated on `r format(max(latest_data$Date), '%d/%m/%Y')`.
+
+
+
