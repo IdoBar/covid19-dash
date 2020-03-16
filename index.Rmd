@@ -2,15 +2,16 @@
 title: "Current Status of the Novel Corona Virus (Covid19) Pandemic Outbreak"
 output: 
   flexdashboard::flex_dashboard:
+    theme: flatly
     vetical_layout: fill
     orientation: rows
-    social: [ "twitter", "facebook", "menu" ]
-    source_code: embed
+    social: [ "menu" ]
+    source_code: "https://github.com/IdoBar/covid19-dash"
 
 ---
 
 ```{r setup, include=FALSE}
-pacman::p_load(flexdashboard, tidyverse, highcharter, readxl, httr, htmltools, rvest, kableExtra, DT, leaflet, leafpm)
+pacman::p_load(flexdashboard, tidyverse, highcharter, readxl, httr, htmltools, rvest, kableExtra, DT, leaflet, leafpm, gganimate)
 # download data from the EU
 # parse download link
 covid_eu_url <- read_html("https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide") %>% html_nodes("a") %>% html_attr("href") %>% .[grepl(".xls", .)] 
@@ -31,7 +32,7 @@ latest_data <- covid_data_csse %>% group_by(`Province/State`, `Country/Region`) 
   slice(1) %>% ungroup()  
 ```
 
-Row {data-height=120}
+Row {data-height=100}
 -----------------------------------------------------------------------
 
 ### Total Confirmed Cases
@@ -80,7 +81,7 @@ confirmed_cases_latest <- latest_data %>% filter(Confirmed>0) %>%
            map(~HTML(.x)))  #%>% select(name,lat=  Lat, lon= Long, z=Confirmed)
 # Create the leaflet map
 leaflet(confirmed_cases_latest) %>% addProviderTiles(providers$CartoDB.Positron) %>% # Esri.WorldStreetMap providers$CartoDB.Positron
-  setView(lng = 72.1193378, lat = 9.5361877, zoom = 3) %>% # 16.7432979,29.195003,3z
+  setView(lng = 72.1193378, lat = 9.5361877, zoom = 2) %>% # 16.7432979,29.195003,3z
   addCircles(radius = ~(sqrt(Confirmed)*2500+50000), fillColor="#ff3030", stroke=FALSE, fillOpacity = 0.7,
                    label = ~popup_text, labelOptions = labelOptions(textOnly = FALSE, textsize = "12px")) %>% 
   # addMarkers(popup = ~Name, label = ~Name, 
@@ -154,10 +155,35 @@ latest_data %>% group_by(`Country/Region`) %>% summarise_at(c("Confirmed", "Deat
 
 ### Disease Progress timeline
 ```{r bar_animation}
-cases_by_country <- covid_data_csse %>% group_by(`Country/Region`, Date) %>% 
+cases_by_country <- covid_data_csse %>% filter(Confirmed>0) %>% group_by(`Country/Region`, Date) %>% 
  summarise_at(c("Confirmed", "Deaths", "Recovered"), ~sum(., na.rm=TRUE)) %>%  
-  mutate(Mortality_rate=ifelse(Confirmed==0, 0, Deaths/Confirmed))
-# ggplot(cases_by_country, aes())
+  ungroup() %>%  group_by(Date) %>% 
+  mutate(Mortality_rate=ifelse(Confirmed==0, 0, Deaths/Confirmed),
+         rank = min_rank(desc(Confirmed+runif(n())))*1 ) %>% ungroup() %>% filter(rank <= 15)
+p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_classic(base_size = 18) +
+  geom_tile(aes(y=sqrt(Confirmed)/2, height=sqrt(Confirmed), width=0.8), fill="orangered") +
+  geom_tile(aes(y=sqrt(Deaths)/2, height=sqrt(Deaths), width=0.8), fill="black", alpha=0.7) +
+  geom_text(aes(y = 0, label = paste(`Country/Region`, " ")), vjust = 0.2, hjust = 1) +
+  geom_text(aes(y = sqrt(Confirmed),
+                label = glue::glue('{scales::comma(Confirmed)} ({Deaths})')), hjust = 0, nudge_y = 5 ) +
+
+  coord_flip(clip = "off", expand = FALSE) +
+  scale_y_continuous(labels = NULL, limits = c(0, sqrt(max(cases_by_country$Confirmed))*1.4)) +
+  # scale_y_sqrt(labels = scales::comma) +
+  scale_x_reverse() +
+
+  labs(title='Number of confirmed cases and deaths as of {closest_state}', x = "", y = "Confirmed Covid19 cases and deaths\n (square-root scale)") +
+  theme(plot.title = element_text(hjust = 0, size = 22),
+        axis.ticks.y = element_blank(),  # These relate to the axes post-flip
+        axis.text.y  = element_blank(),  # These relate to the axes post-flip
+        plot.margin = margin(1,1,1,4, "cm")) +
+
+  transition_states(Date, transition_length = 4, state_length = 1) +
+  enter_grow() +  exit_shrink() + 
+  ease_aes('linear')
+  # ease_aes('cubic-in-out') 
+
+animate(p, fps = 25, duration = 20, width = 800, height = 600, end_pause = 10)
 ```
 
 
