@@ -11,6 +11,8 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+# load custom functions
+devtools::source_gist("7f63547158ecdbacf31b54a58af0d1cc", filename = "util.R")
 pacman::p_load(flexdashboard, tidyverse, highcharter, readxl, httr, htmltools, rvest, kableExtra, DT, leaflet, leafpm, gganimate)
 # download data from the EU
 # parse download link
@@ -26,7 +28,7 @@ process_csse_csv <- function(csvurl, datacol){
 csse_files <- c("Confirmed", "Deaths", "Recovered")
 covid_data_csse <- csse_files %>% map(~process_csse_csv(glue::glue("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-{.x}.csv"), .x)) %>% reduce(left_join) #%>%  mutate(Mortality_rate=Deaths/Confirmed)
 
-covid_data_who <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/who_covid_19_situation_reports/who_covid_19_sit_rep_time_series/who_covid_19_sit_rep_time_series.csv")
+# covid_data_who <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/who_covid_19_situation_reports/who_covid_19_sit_rep_time_series/who_covid_19_sit_rep_time_series.csv")
 
 latest_data <- covid_data_csse %>% group_by(`Province/State`, `Country/Region`) %>% arrange(desc(Date)) %>% 
   slice(1) %>% ungroup()  
@@ -38,7 +40,7 @@ Row {data-height=100}
 ### Total Confirmed Cases
 
 ```{r}
-valueBox(scales::comma(sum(latest_data$Confirmed, na.rm=TRUE)), icon = "fa-procedures", color="warning") # ion-fitness-outline fa-biohazard ion-medkit-outline ion-ios-medkit-outline
+valueBox(scales::comma(sum(latest_data$Confirmed, na.rm=TRUE)), icon = "ion-ios-medkit-outline", color="warning") # ion-fitness-outline fa-biohazard ion-medkit-outline ion-ios-medkit-outline fa-procedures
 ```
 
 ### Total Recovered Cases
@@ -155,9 +157,9 @@ latest_data %>% group_by(`Country/Region`) %>% summarise_at(c("Confirmed", "Deat
 
 ### Disease Progress timeline
 ```{r bar_animation}
-cases_by_country <- covid_data_csse %>% filter(Confirmed>0) %>% group_by(`Country/Region`, Date) %>% 
+cases_by_country <- covid_data_csse %>% group_by(`Country/Region`, Date) %>% 
  summarise_at(c("Confirmed", "Deaths", "Recovered"), ~sum(., na.rm=TRUE)) %>%  
-  ungroup() %>%  group_by(Date) %>% 
+  ungroup() %>% write_csv(glue::glue("data/csse_country_covid_data_{format(max(latest_data$Date), '%d_%m_%Y')}.csv")) %>% filter(Confirmed>0)  %>%  group_by(Date) %>% 
   mutate(Mortality_rate=ifelse(Confirmed==0, 0, Deaths/Confirmed),
          rank = min_rank(desc(Confirmed+runif(n())))*1 ) %>% ungroup() %>% filter(rank <= 15)
 p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_classic(base_size = 18) +
