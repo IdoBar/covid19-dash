@@ -18,7 +18,7 @@ pacman::p_load(flexdashboard, tidyverse, highcharter, readxl, httr, htmltools, r
 # parse download link
 covid_eu_url <- read_html("https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide") %>% html_nodes("a") %>% html_attr("href") %>% .[grepl(".xls", .)] 
 # download the file to a temporary location
-GET(covid_eu_url, write_disk(tf <- tempfile(fileext = ".xls")))
+GET(covid_eu_url, write_disk(tf <- tempfile(fileext = paste0(".", tools::file_ext(covid_eu_url)))))
 covid_data_eu <- readxl::read_excel(tf)
 # Download data from Josh Hopkins University (https://github.com/CSSEGISandData/COVID-19)
 process_csse_csv <- function(csvurl, datacol){
