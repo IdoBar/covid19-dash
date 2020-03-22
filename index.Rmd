@@ -82,7 +82,8 @@ confirmed_cases_latest <- latest_data %>% filter(Confirmed>0) %>%
          popup_text=glue::glue('Province/Country: {name}<br/>Confirmed cases: {kableExtra::text_spec(scales::comma(Confirmed), background  = "gold")}<br/>Confirmed deaths: {kableExtra::text_spec(scales::comma(Deaths), background  = "orangered", color="white")} ({scales::percent(Deaths/Confirmed, accuracy=.1)})<br/>Confirmed recovered: {kableExtra::text_spec(scales::comma(Recovered), background  = "limegreen")}') %>% 
            map(~HTML(.x)))  #%>% select(name,lat=  Lat, lon= Long, z=Confirmed)
 # Create the leaflet map
-leaflet(confirmed_cases_latest) %>% addProviderTiles(providers$CartoDB.Positron) %>% # Esri.WorldStreetMap providers$CartoDB.Positron
+leaflet(confirmed_cases_latest) %>% addProviderTiles(providers$CartoDB.Positron,  
+                                                      options = providerTileOptions(noWrap = TRUE, minZoom=2)) %>% # Esri.WorldStreetMap providers$CartoDB.Positron
   setView(lng = 72.1193378, lat = 9.5361877, zoom = 2) %>% # 16.7432979,29.195003,3z
   addCircles(radius = ~(sqrt(Confirmed)*2500+50000), fillColor="#ff3030", stroke=FALSE, fillOpacity = 0.7,
                    label = ~popup_text, labelOptions = labelOptions(textOnly = FALSE, textsize = "12px")) %>% 
@@ -112,22 +113,58 @@ leaflet(confirmed_cases_latest) %>% addProviderTiles(providers$CartoDB.Positron)
 
 > Number of confirmed Covid19 cases by Province/Country (last updated on `r format(max(latest_data$Date), '%d/%m/%Y')`)
 
-<!-- ### Map -->
+<!-- ### Choroplet Map -->
 
 <!-- ```{r confirmed_map} -->
-<!-- confirmed_cases_latest <- latest_data %>% filter(Confirmed>0) %>%  -->
-<!--   mutate(name= ifelse(is.na(`Province/State`),`Country/Region`, glue::glue('{`Province/State`} ({`Country/Region`})')), -->
-<!--          log_confirmed=log(Confirmed)) %>% select(name,lat=  Lat, lon= Long, z=Confirmed) -->
-<!-- hcmap("custom/world-palestine-highres", showInLegend = FALSE, fillcolour="#ff3030") %>%  -->
-<!--   hc_add_series(data = confirmed_cases_latest, fillcolour="#ff3030", -->
-<!--                 type = "mapbubble", name = "Confirmed Cases", maxSize = '15%') %>%  -->
-<!--   hc_mapNavigation(enabled = TRUE) %>%  -->
+<!-- new_cases_country <- covid_data_eu %>% rename(Country=`Countries and territories`) %>%  -->
+<!--   mutate(Country=str_to_title(Country)) %>%  -->
+<!--   group_by(Country) %>% arrange(Country, DateRep) %>%  -->
+<!--   mutate(Total_cases=cumsum(Cases), Total_Deaths=cumsum(Deaths),  -->
+<!--          GeoId = case_when(GeoId=="UK"~"GB", -->
+<!--                            GeoId=="PS"~"GZ", -->
+<!--                            GeoId=="EL"~"GR", -->
+<!--                            GeoId=="XK"~"KV", -->
+<!--                            GeoId=="JPG11668"~"UM", -->
+<!--                            TRUE~GeoId) -->
+<!--                                                              ) -->
+
+<!-- world_map <- download_map_data("custom/world-palestine-highres") -->
+<!-- mapdata <- get_data_from_map(world_map) -->
+<!-- new_cases_country %>% group_by(Country) %>% slice(1) %>% filter(!GeoId %in% mapdata$`hc-a2`) -->
+
+<!-- mapdata %>% filter(grepl("China|Bermuda|Cayman|Polynesia|Gibraltar|Greece|Gaza|United Kingdom|Guernsey|isle of man|Jersey|Kosovo|Montserrat|antilles", name, ignore.case = T, perl = T)) -->
+
+<!-- choroplet_data <- new_cases_country %>% filter(GeoId %in% mapdata$`hc-a2`) %>% group_by(Country) %>% arrange(desc(DateRep)) %>%  -->
+<!--   slice(1) -->
+<!-- # plot map -->
+<!--   highchart(type = "map") %>%  -->
+<!--     hc_add_series_map(map = world_map, df = choroplet_data,  -->
+<!--                       value = "Total_cases", joinBy = c("hc-a2", "GeoId")) %>%  -->
+<!--     hc_colorAxis(stops = color_stops()) %>%  -->
+<!--     hc_tooltip(useHTML=TRUE,headerFormat='', -->
+<!--                pointFormat = paste0('{point.Country} confirmed cases : {point.Total_cases} ')) %>%  -->
+<!--     hc_mapNavigation(enabled = TRUE) %>% -->
 <!--   hc_title(text = "Number of confirmed Covid19 cases by Province/State", -->
 <!--            margin = 40, align = "left", -->
-<!--            style = list(color = "#2b908f", useHTML = TRUE)) %>%  -->
+<!--            style = list(color = "#2b908f", useHTML = TRUE)) %>% -->
 <!--   hc_subtitle(text = glue::glue("Data last updated on {format(max(latest_data$Date), '%d/%m/%Y')}"), -->
 <!--               align = "left", -->
-<!--               style = list(color = "#2b908f", fontWeight = "bold")) %>%  -->
+<!--               style = list(color = "#2b908f", fontWeight = "bold")) %>% -->
+<!--   hc_exporting(enabled = TRUE) -->
+
+
+
+
+<!-- hcmap("custom/world-palestine-highres", showInLegend = FALSE, fillcolour="#ff3030") %>% -->
+<!--   hc_add_series(data = confirmed_cases_latest, fillcolour="#ff3030", -->
+<!--                 type = "mapbubble", name = "Confirmed Cases", maxSize = '15%') %>% -->
+<!--   hc_mapNavigation(enabled = TRUE) %>% -->
+<!--   hc_title(text = "Number of confirmed Covid19 cases by Province/State", -->
+<!--            margin = 40, align = "left", -->
+<!--            style = list(color = "#2b908f", useHTML = TRUE)) %>% -->
+<!--   hc_subtitle(text = glue::glue("Data last updated on {format(max(latest_data$Date), '%d/%m/%Y')}"), -->
+<!--               align = "left", -->
+<!--               style = list(color = "#2b908f", fontWeight = "bold")) %>% -->
 <!--   hc_exporting(enabled = TRUE) # enable exporting option -->
 <!-- ``` -->
 
