@@ -168,9 +168,9 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
   hc_title(text = "Number of confirmed Covid 19 cases by Country",
            margin = 40, align = "left",
            style = list(color = "#2b908f", useHTML = TRUE)) %>%
-  # hc_subtitle(text = glue::glue("Data last updated on {format(max(choroplet_data$DateRep), '%d/%m/%Y')}"),
-  #             align = "left",
-  #             style = list(color = "#2b908f", fontWeight = "bold")) %>%
+  hc_subtitle(text = glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$DateRep), "%d/%m/%Y")})'),
+              align = "left",
+              style = list(color = "#2b908f", fontWeight = "bold")) %>%
   hc_exporting(enabled = TRUE)
 
 ```
@@ -191,9 +191,9 @@ plot <- ggplot(plot_data, aes(x=DateRep, y=Cases, colour=Country)) +
   labs(x="Date", y="Confirmed Cases", title = "New confirmed Covid 19 cases", subtitle = "Showing 10 most affected countries + Australia") +
   theme_bw(16)
 # show an interactive plot
-ggplotly(plot)
+ggplotly(plot, width = 800, height = 600)
 ```
-
+> `r glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$DateRep), "%d/%m/%Y")})')`
 
 ### Disease Progress timeline
 ```{r bar_animation}
@@ -221,8 +221,8 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
         plot.margin = margin(1,1,1,4, "cm")) +
 
   transition_states(Date, transition_length = 4, state_length = 1) +
-  enter_grow() +  #exit_shrink() + 
-  ease_aes('linear')
+  enter_grow() +  ease_aes('linear') + exit_shrink() + 
+  
   # ease_aes('cubic-in-out') 
 
 animate(p, fps = 25, duration = 20, width = 800, height = 600, end_pause = 100)
@@ -254,9 +254,11 @@ latest_data %>% group_by(`Country/Region`) %>% summarise_at(c("Confirmed", "Deat
 
 ### Data Sources
 
-The information presented here is sourced from data collected from a range of sources by the Johns Hopkins University Center for Systems Science and Engineering (JHU CSSE) and hosted on their [GitHub repository](https://github.com/CSSEGISandData/COVID-19).
+The information presented here is sourced from data collected from a range of sources by the Johns Hopkins University Center for Systems Science and Engineering (JHU CSSE) and hosted on their [GitHub repository](https://github.com/CSSEGISandData/COVID-19) (data last updated on `r format(max(latest_data$Date), "%d/%m/%Y")`).  
+Daily data is sourced from the European Centre for Disease Prevention and Control [website](https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide) (last updated on `r format(max(choroplet_data$DateRep), "%d/%m/%Y")`)
 
-This site was compiled on `r format(Sys.time(), '%c')` from data last updated on `r format(max(latest_data$Date), '%d/%m/%Y')`.
+
+This site was compiled by Ido Bar (c) on `r format(Sys.time(), '%c')` using [Rmarkdown and flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/).  
 
 
 
