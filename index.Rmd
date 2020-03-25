@@ -222,12 +222,12 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
         axis.text.y  = element_blank(),  # These relate to the axes post-flip
         plot.margin = margin(1,1,1,4, "cm")) +
 
-  transition_states(Date, transition_length = 4, state_length = 1) +
+  transition_states(Date, transition_length = 4, state_length = 1, wrap=FALSE) +
   enter_grow() +  ease_aes('linear') + exit_shrink() 
   
   # ease_aes('cubic-in-out') 
 
-animate(p, fps = 25, duration = 20, width = 800, height = 600, end_pause = 100)
+animate(p, fps = 25, duration = 20, width = 800, height = 700, end_pause = 120)
 ```
 
 ### Current Status Summary Table
