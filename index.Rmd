@@ -188,12 +188,14 @@ plot_data <- covid_daily_data %>% filter(Country %in% most_affected_eu_data) %>%
 plot <- ggplot(plot_data, aes(x=DateRep, y=Cases, colour=Country)) +
   geom_line(size=0.6) + #scale_y_log10(labels=scales::comma) +
     scale_color_paletteer_d("ggsci::springfield_simpsons") +
-  labs(x="Date", y="Confirmed Cases", title = "New confirmed Covid 19 cases", subtitle = "Showing 10 most affected countries + Australia") +
+  labs(x="Date", y="Confirmed Cases", title = "Daily new confirmed Covid 19 cases", subtitle = "Showing 10 most affected countries + Australia") +
   theme_bw(16)
 # show an interactive plot
-ggplotly(plot, width = 800, height = 600)
+ggplotly(plot, width = 1000, height = 500)
 ```
+
 > `r glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$DateRep), "%d/%m/%Y")})')`
+
 
 ### Disease Progress timeline
 ```{r bar_animation}
@@ -221,7 +223,7 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
         plot.margin = margin(1,1,1,4, "cm")) +
 
   transition_states(Date, transition_length = 4, state_length = 1) +
-  enter_grow() +  ease_aes('linear') + exit_shrink() + 
+  enter_grow() +  ease_aes('linear') + exit_shrink() 
   
   # ease_aes('cubic-in-out') 
 
