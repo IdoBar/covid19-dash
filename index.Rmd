@@ -13,7 +13,7 @@ output:
 ```{r setup, include=FALSE}
 # load custom functions
 devtools::source_gist("7f63547158ecdbacf31b54a58af0d1cc", filename = "util.R")
-pacman::p_load(flexdashboard, tidyverse, highcharter, readxl, httr, htmltools, rvest, kableExtra, DT, leaflet, leafpm, gganimate)
+pacman::p_load(flexdashboard, plotly, tidyverse, paletteer, highcharter, readxl, httr, htmltools, rvest, kableExtra, DT, leaflet, leafpm, gganimate)
 # download data from the EU
 # parse download link
 covid_eu_url <- read_html("https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide") %>% html_nodes("a") %>% html_attr("href") %>% .[grepl(".xls", .)] 
@@ -113,84 +113,87 @@ leaflet(confirmed_cases_latest) %>% addProviderTiles(providers$CartoDB.Positron,
 
 > Number of confirmed Covid19 cases by Province/Country (last updated on `r format(max(latest_data$Date), '%d/%m/%Y')`)
 
-<!-- ### Choroplet Map -->
+### Choroplet Map
 
-<!-- ```{r confirmed_map} -->
-<!-- new_cases_country <- covid_data_eu %>% rename(Country=`Countries and territories`) %>%  -->
-<!--   mutate(Country=str_to_title(Country)) %>%  -->
-<!--   group_by(Country) %>% arrange(Country, DateRep) %>%  -->
-<!--   mutate(Total_cases=cumsum(Cases), Total_Deaths=cumsum(Deaths),  -->
-<!--          GeoId = case_when(GeoId=="UK"~"GB", -->
-<!--                            GeoId=="PS"~"GZ", -->
-<!--                            GeoId=="EL"~"GR", -->
-<!--                            GeoId=="XK"~"KV", -->
-<!--                            GeoId=="JPG11668"~"UM", -->
-<!--                            TRUE~GeoId) -->
-<!--                                                              ) -->
+```{r confirmed_map}
 
-<!-- world_map <- download_map_data("custom/world-palestine-highres") -->
-<!-- mapdata <- get_data_from_map(world_map) -->
-<!-- new_cases_country %>% group_by(Country) %>% slice(1) %>% filter(!GeoId %in% mapdata$`hc-a2`) -->
+covid_daily_data <- covid_data_eu %>% 
+  rename(Country=`Countries and territories`) %>%
+  mutate(Country=str_to_title(Country)) %>%
+  group_by(Country) %>% arrange(Country, DateRep) %>%
+  mutate(Total_cases=cumsum(Cases), Total_Deaths=cumsum(Deaths), 
+         GeoId = case_when(GeoId=="UK"~"GB",
+                           GeoId=="EL"~"GR",
+                           GeoId=="PS"~"WE",
+                           GeoId=="XK"~"KV",
+                           GeoId=="JPG11668"~"UM",
+                           TRUE~GeoId)) %>% 
+         # iso2c=case_when(GeoId=="PS"~"WEB", countrycode(GeoId, origin = 'iso2c', destination = 'iso3c')) %>% 
+  ungroup()
 
-<!-- mapdata %>% filter(grepl("China|Bermuda|Cayman|Polynesia|Gibraltar|Greece|Gaza|United Kingdom|Guernsey|isle of man|Jersey|Kosovo|Montserrat|antilles", name, ignore.case = T, perl = T)) -->
+# download map data
+world_map <- download_map_data("custom/world-palestine-highres")
+mapdata <- get_data_from_map(world_map)
 
-<!-- choroplet_data <- new_cases_country %>% filter(GeoId %in% mapdata$`hc-a2`) %>% group_by(Country) %>% arrange(desc(DateRep)) %>%  -->
-<!--   slice(1) -->
-<!-- # plot map -->
-<!--   highchart(type = "map") %>%  -->
-<!--     hc_add_series_map(map = world_map, df = choroplet_data,  -->
-<!--                       value = "Total_cases", joinBy = c("hc-a2", "GeoId")) %>%  -->
-<!--     hc_colorAxis(stops = color_stops()) %>%  -->
-<!--     hc_tooltip(useHTML=TRUE,headerFormat='', -->
-<!--                pointFormat = paste0('{point.Country} confirmed cases : {point.Total_cases} ')) %>%  -->
-<!--     hc_mapNavigation(enabled = TRUE) %>% -->
-<!--   hc_title(text = "Number of confirmed Covid19 cases by Province/State", -->
-<!--            margin = 40, align = "left", -->
-<!--            style = list(color = "#2b908f", useHTML = TRUE)) %>% -->
-<!--   hc_subtitle(text = glue::glue("Data last updated on {format(max(latest_data$Date), '%d/%m/%Y')}"), -->
-<!--               align = "left", -->
-<!--               style = list(color = "#2b908f", fontWeight = "bold")) %>% -->
-<!--   hc_exporting(enabled = TRUE) -->
+# select only most current data
+choroplet_data <- covid_daily_data %>%  group_by(Country) %>% arrange(desc(DateRep)) %>% 
+  slice(1) %>% filter(Total_cases>0) %>% mutate(log_cases=log(Total_cases), CFR=scales::percent(Total_Deaths/Total_cases, accuracy=.01))
 
+# # define colors
 
+bins <- 10^(0:6)# c(1, 10, 100, 1000, 10000, 100000, 1000000)
+cols <- as.character(paletteer_c("viridis::inferno", length(bins), direction = -1))
+stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
+# check possible solution here:
+# https://stackoverflow.com/a/40724354/5346827
+# stops <- data.frame(q=bins/bins[length(bins)], c=cols) %>% list_parse2(.)
+# stops <- data.frame(name=bins, from=log(bins)/log(bins[length(bins)]), color=cols, stringsAsFactors = FALSE) %>% list_parse2(.)
+# stops <- data.frame(q=rev(1-log(bins)/log(bins[length(bins)])), c=cols) %>% list_parse2(.)
 
-
-<!-- hcmap("custom/world-palestine-highres", showInLegend = FALSE, fillcolour="#ff3030") %>% -->
-<!--   hc_add_series(data = confirmed_cases_latest, fillcolour="#ff3030", -->
-<!--                 type = "mapbubble", name = "Confirmed Cases", maxSize = '15%') %>% -->
-<!--   hc_mapNavigation(enabled = TRUE) %>% -->
-<!--   hc_title(text = "Number of confirmed Covid19 cases by Province/State", -->
-<!--            margin = 40, align = "left", -->
-<!--            style = list(color = "#2b908f", useHTML = TRUE)) %>% -->
-<!--   hc_subtitle(text = glue::glue("Data last updated on {format(max(latest_data$Date), '%d/%m/%Y')}"), -->
-<!--               align = "left", -->
-<!--               style = list(color = "#2b908f", fontWeight = "bold")) %>% -->
-<!--   hc_exporting(enabled = TRUE) # enable exporting option -->
-<!-- ``` -->
-
-### Current Status Summary Table
-
-<!-- #### Current status of the Covid19 pandemic (updated on `r format(Sys.time(), "%c")`) -->
-
-```{r latest_report_table}
-tab_caption <- glue::glue("Current status of the Covid19 pandemic (data updated on {format(max(latest_data$Date), '%d/%m/%Y')})")
-latest_data %>% group_by(`Country/Region`) %>% summarise_at(c("Confirmed", "Deaths", "Recovered"), ~sum(.)) %>%  
-  mutate(Mortality_rate=Deaths/Confirmed) %>% 
-  arrange(desc(Confirmed)) %>% 
-  # select(`Country/Region`, Confirmed, Deaths, Recovered, Mortality_rate) %>% 
-  # mutate_at(c("Confirmed", "Deaths", "Recovered"), scales::comma) %>% 
-  # mutate(Mortality_rate=scales::percent(Mortality_rate, accuracy = .01)) %>% 
-  DT::datatable(., colnames = c("Mortality Rate"="Mortality_rate"), rownames = FALSE, 
-                style = 'bootstrap', class = 'table-bordered table-condensed', 
-                caption = tab_caption,# 
-                options = list(pageLength = 15,
-                columnDefs = list(list(className = 'dt-center', targets = 1:4)))
-                ) %>% formatStyle('Mortality Rate',
-  backgroundColor = styleInterval(c(0.01,0.04,0.07), c('limegreen',NA, 'gold', 'orangered'))) %>%  # 'orange', 'orangered', 'firebrick'
-  formatPercentage("Mortality Rate", digits = 2) %>% formatRound(c("Confirmed", "Deaths", "Recovered"), digits = 0)
-    
+# plot map
+  highchart(type = "map", hc_opts = list(caption=glue::glue("<b>Number of confirmed Covid 19 cases by Country</b><br/>An up-to-date summary of daily data obtained from the European Centre for Disease Prevention and Control<br/>Data was last updated on {format(max(choroplet_data$DateRep), '%d/%m/%Y')}."))) %>%
+    hc_add_series_map(map = world_map, df = choroplet_data,
+                      value = "log_cases", joinBy = c("iso-a2", "GeoId")) %>%
+    hc_colorAxis(stops  = color_stops(length(bins), cols), tickPositions=log(bins), showLastLabel=FALSE, labels=list(formatter=JS("function(){ 
+    var n=Math.exp(this.value);
+    if (n < 1e3) return n.toFixed(0);
+    if (n >= 1e3 && n < 1e6) return +(n / 1e3).toFixed(1) + 'k';
+    if (n >= 1e6 && n < 1e9) return +(n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e9 && n < 1e12) return +(n / 1e9).toFixed(1) + 'B';
+    if (n >= 1e12) return +(n / 1e12).toFixed(1) + 'T';}"))) %>%
+  # return Highcharts.numberFormat(Math.exp(this.value), 0, '.', ','); }"))) %>%
+    hc_tooltip(useHTML=TRUE,headerFormat='',
+               pointFormat = paste0('{point.Country} confirmed cases : {point.Total_cases}<br/>Deaths: {point.Total_Deaths} (CFR {point.CFR})')) %>%
+    hc_mapNavigation(enabled = TRUE) %>%
+  hc_title(text = "Number of confirmed Covid 19 cases by Country",
+           margin = 40, align = "left",
+           style = list(color = "#2b908f", useHTML = TRUE)) %>%
+  # hc_subtitle(text = glue::glue("Data last updated on {format(max(choroplet_data$DateRep), '%d/%m/%Y')}"),
+  #             align = "left",
+  #             style = list(color = "#2b908f", fontWeight = "bold")) %>%
+  hc_exporting(enabled = TRUE)
 
 ```
+
+### New Daily Cases
+```{r timeseries_newcases}
+# find the 10 most affected countries and order them from the most affected to the least one
+most_affected_eu_data <- covid_daily_data %>% group_by(Country) %>% arrange(desc(DateRep)) %>% slice(1) %>% ungroup()  %>% arrange(desc(Total_cases)) %>% slice(1:10) %>% .$Country %>% c(., "Australia")
+
+# subset the daily data and add Australia as well
+plot_data <- covid_daily_data %>% filter(Country %in% most_affected_eu_data) %>% 
+  mutate(Country=fct_reorder(factor(Country), Total_cases, .desc = TRUE)) %>% 
+  filter(DateRep>as.Date("2020-02-01"))
+# create the plot
+plot <- ggplot(plot_data, aes(x=DateRep, y=Cases, colour=Country)) +
+  geom_line(size=0.6) + #scale_y_log10(labels=scales::comma) +
+    scale_color_paletteer_d("ggsci::springfield_simpsons") +
+  labs(x="Date", y="Confirmed Cases", title = "New confirmed Covid 19 cases", subtitle = "Showing 10 most affected countries + Australia") +
+  theme_bw(16)
+# show an interactive plot
+ggplotly(plot)
+```
+
 
 ### Disease Progress timeline
 ```{r bar_animation}
@@ -218,13 +221,36 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
         plot.margin = margin(1,1,1,4, "cm")) +
 
   transition_states(Date, transition_length = 4, state_length = 1) +
-  enter_grow() +  exit_shrink() + 
+  enter_grow() +  #exit_shrink() + 
   ease_aes('linear')
   # ease_aes('cubic-in-out') 
 
-animate(p, fps = 25, duration = 20, width = 800, height = 600, end_pause = 10)
+animate(p, fps = 25, duration = 20, width = 800, height = 600, end_pause = 100)
 ```
 
+### Current Status Summary Table
+
+<!-- #### Current status of the Covid19 pandemic (updated on `r format(Sys.time(), "%c")`) -->
+
+```{r latest_report_table}
+tab_caption <- glue::glue("Current status of the Covid19 pandemic (data updated on {format(max(latest_data$Date), '%d/%m/%Y')})")
+latest_data %>% group_by(`Country/Region`) %>% summarise_at(c("Confirmed", "Deaths", "Recovered"), ~sum(.)) %>%  
+  mutate(Mortality_rate=Deaths/Confirmed) %>% 
+  arrange(desc(Confirmed)) %>% 
+  # select(`Country/Region`, Confirmed, Deaths, Recovered, Mortality_rate) %>% 
+  # mutate_at(c("Confirmed", "Deaths", "Recovered"), scales::comma) %>% 
+  # mutate(Mortality_rate=scales::percent(Mortality_rate, accuracy = .01)) %>% 
+  DT::datatable(., colnames = c("Mortality Rate"="Mortality_rate"), rownames = FALSE, 
+                style = 'bootstrap', class = 'table-bordered table-condensed', 
+                caption = tab_caption,# 
+                options = list(pageLength = 15,
+                columnDefs = list(list(className = 'dt-center', targets = 1:4)))
+                ) %>% formatStyle('Mortality Rate',
+  backgroundColor = styleInterval(c(0.01,0.04,0.07), c('limegreen',NA, 'gold', 'orangered'))) %>%  # 'orange', 'orangered', 'firebrick'
+  formatPercentage("Mortality Rate", digits = 2) %>% formatRound(c("Confirmed", "Deaths", "Recovered"), digits = 0)
+    
+
+```
 
 ### Data Sources
 
