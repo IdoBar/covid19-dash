@@ -26,11 +26,11 @@ process_csse_csv <- function(csvurl, datacol){
   pivot_longer(cols = ends_with("/20"), names_to = "Date", values_to = datacol) %>% mutate(Date=as.Date(Date, "%m/%d/%y"))
 }
 csse_files <- c("Confirmed", "Deaths", "Recovered") 
-covid_daily_csse_data <- csse_files %>% map(~process_csse_csv(glue::glue("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_{tolower(.x)}_global.csv"), .x)) %>% reduce(left_join) #%>%  mutate(Mortality_rate=Deaths/Confirmed)
+covid_data_csse <- csse_files %>% map(~process_csse_csv(glue::glue("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_{tolower(.x)}_global.csv"), .x)) %>% reduce(left_join) #%>%  mutate(Mortality_rate=Deaths/Confirmed)
 
-covid_data_csse <- covid_daily_csse_data %>% group_by(`Province/State`, `Country/Region`) %>% 
-  mutate(Confirmed=cumsum(Confirmed), Deaths=cumsum(Deaths), Recovered=cumsum(Recovered)) %>% 
-  ungroup() 
+# covid_data_csse <- covid_daily_csse_data %>% group_by(`Province/State`, `Country/Region`) %>% 
+#   mutate(Confirmed=cumsum(Confirmed), Deaths=cumsum(Deaths), Recovered=cumsum(Recovered)) %>% 
+#   ungroup() 
 # 
 # read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv")
  
@@ -117,7 +117,7 @@ leaflet(confirmed_cases_latest) %>% addProviderTiles(providers$CartoDB.Positron,
 #   hc_exporting(enabled = TRUE) # enable exporting option
 ```
 
-> Number of confirmed Covid19 cases by Province/Country (last updated on `r format(max(latest_data$Date), '%d/%m/%Y')`)
+> Number of confirmed Covid19 cases by Province/Country (Data origin: <a href='https://github.com/CSSEGISandData/COVID-19'>Johns Hopkins University Center for Systems Science and Engineering</a>, last updated on `r format(max(latest_data$Date), '%d/%m/%Y')`)
 
 ### Choroplet Map
 
@@ -194,7 +194,7 @@ plot_data <- covid_daily_data %>% filter(Country %in% most_affected_eu_data) %>%
 plot <- ggplot(plot_data, aes(x=DateRep, y=Cases, colour=Country)) +
   geom_line(size=0.6) + #scale_y_log10(labels=scales::comma) +
     scale_color_paletteer_d("ggsci::springfield_simpsons") +
-  labs(x="Date", y="Confirmed Cases", title = "Daily new confirmed Covid 19 cases", subtitle = "Showing 10 most affected countries + Australia") +
+  labs(x="Date", y="New Confirmed Cases", title = "Daily confirmed Covid 19 cases", subtitle = "Showing 10 most affected countries + Australia") +
   theme_bw(16)
 # show an interactive plot
 ggplotly(plot, width = 1000, height = 500)
@@ -233,29 +233,31 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
   
   # ease_aes('cubic-in-out') 
 
-# animate(p, fps = 25, duration = 20, width = 800, height = 700, end_pause = 120)
+animate(p, fps = 25, duration = 20, width = 800, height = 700, end_pause = 120)
 ```
+
+> `r glue::glue('Data origin: <a href="https://github.com/CSSEGISandData/COVID-19">Johns Hopkins University Center for Systems Science and Engineering</a> (updated on {format(max(latest_data$Date), "%d/%m/%Y")})')`
 
 ### Current Status Summary Table
 
 <!-- #### Current status of the Covid19 pandemic (updated on `r format(Sys.time(), "%c")`) -->
 
 ```{r latest_report_table}
-tab_caption <- glue::glue("Current status of the Covid19 pandemic (data updated on {format(max(latest_data$Date), '%d/%m/%Y')})")
+tab_caption <- glue::glue("Current status of the Covid19 pandemic (Data origin: <a href='https://github.com/CSSEGISandData/COVID-19'>Johns Hopkins University Center for Systems Science and Engineering</a>, last updated on {format(max(latest_data$Date), '%d/%m/%Y')})")
 latest_data %>% group_by(`Country/Region`) %>% summarise_at(c("Confirmed", "Deaths", "Recovered"), ~sum(.)) %>%  
   mutate(Mortality_rate=Deaths/Confirmed) %>% 
   arrange(desc(Confirmed)) %>% 
   # select(`Country/Region`, Confirmed, Deaths, Recovered, Mortality_rate) %>% 
   # mutate_at(c("Confirmed", "Deaths", "Recovered"), scales::comma) %>% 
   # mutate(Mortality_rate=scales::percent(Mortality_rate, accuracy = .01)) %>% 
-  DT::datatable(., colnames = c("Mortality Rate"="Mortality_rate"), rownames = FALSE, 
+  DT::datatable(., colnames = c("Case Fatality Rate"="Mortality_rate"), rownames = FALSE, 
                 style = 'bootstrap', class = 'table-bordered table-condensed', 
                 caption = tab_caption,# 
                 options = list(pageLength = 15,
                 columnDefs = list(list(className = 'dt-center', targets = 1:4)))
-                ) %>% formatStyle('Mortality Rate',
+                ) %>% formatStyle('Case Fatality Rate',
   backgroundColor = styleInterval(c(0.01,0.04,0.07), c('limegreen',NA, 'gold', 'orangered'))) %>%  # 'orange', 'orangered', 'firebrick'
-  formatPercentage("Mortality Rate", digits = 2) %>% formatRound(c("Confirmed", "Deaths", "Recovered"), digits = 0)
+  formatPercentage("Case Fatality Rate", digits = 2) %>% formatRound(c("Confirmed", "Deaths", "Recovered"), digits = 0)
     
 
 ```
