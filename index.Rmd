@@ -25,9 +25,15 @@ process_csse_csv <- function(csvurl, datacol){
   covid_data_csse <- read_csv(csvurl) %>% 
   pivot_longer(cols = ends_with("/20"), names_to = "Date", values_to = datacol) %>% mutate(Date=as.Date(Date, "%m/%d/%y"))
 }
-csse_files <- c("Confirmed", "Deaths", "Recovered")
-covid_data_csse <- csse_files %>% map(~process_csse_csv(glue::glue("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-{.x}.csv"), .x)) %>% reduce(left_join) #%>%  mutate(Mortality_rate=Deaths/Confirmed)
+csse_files <- c("Confirmed", "Deaths", "Recovered") 
+covid_daily_csse_data <- csse_files %>% map(~process_csse_csv(glue::glue("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_{tolower(.x)}_global.csv"), .x)) %>% reduce(left_join) #%>%  mutate(Mortality_rate=Deaths/Confirmed)
 
+covid_data_csse <- covid_daily_csse_data %>% group_by(`Province/State`, `Country/Region`) %>% 
+  mutate(Confirmed=cumsum(Confirmed), Deaths=cumsum(Deaths), Recovered=cumsum(Recovered)) %>% 
+  ungroup() 
+# 
+# read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv")
+ 
 # covid_data_who <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/who_covid_19_situation_reports/who_covid_19_sit_rep_time_series/who_covid_19_sit_rep_time_series.csv")
 
 latest_data <- covid_data_csse %>% group_by(`Province/State`, `Country/Region`) %>% arrange(desc(Date)) %>% 
@@ -227,7 +233,7 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
   
   # ease_aes('cubic-in-out') 
 
-animate(p, fps = 25, duration = 20, width = 800, height = 700, end_pause = 120)
+# animate(p, fps = 25, duration = 20, width = 800, height = 700, end_pause = 120)
 ```
 
 ### Current Status Summary Table
