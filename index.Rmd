@@ -16,7 +16,7 @@ devtools::source_gist("7f63547158ecdbacf31b54a58af0d1cc", filename = "util.R")
 pacman::p_load(flexdashboard, plotly, tidyverse, paletteer, highcharter, readxl, httr, htmltools, rvest, kableExtra, DT, leaflet, leafpm, gganimate)
 # download data from the EU
 # parse download link
-covid_eu_url <- read_html("https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide") %>% html_nodes("a") %>% html_attr("href") %>% .[grepl(".xls", .)] 
+covid_eu_url <- read_html("https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide") %>% html_nodes("a") %>% html_attr("href") %>% .[grepl(".xls", .)] %>% .[1]
 # download the file to a temporary location
 GET(covid_eu_url, write_disk(tf <- tempfile(fileext = paste0(".", tools::file_ext(covid_eu_url)))))
 covid_data_eu <- readxl::read_excel(tf)
@@ -124,17 +124,17 @@ leaflet(confirmed_cases_latest) %>% addProviderTiles(providers$CartoDB.Positron,
 ```{r confirmed_map}
 
 covid_daily_data <- covid_data_eu %>% 
-  rename(Country=`Countries and territories`) %>%
+  rename(Country=countriesAndTerritories) %>%
   mutate(Country=str_to_title(Country)) %>%
-  group_by(Country) %>% arrange(Country, DateRep) %>%
-  mutate(Total_cases=cumsum(Cases), Total_Deaths=cumsum(Deaths), 
-         GeoId = case_when(GeoId=="UK"~"GB",
-                           GeoId=="EL"~"GR",
-                           GeoId=="PS"~"WE",
-                           GeoId=="XK"~"KV",
-                           GeoId=="JPG11668"~"UM",
-                           TRUE~GeoId)) %>% 
-         # iso2c=case_when(GeoId=="PS"~"WEB", countrycode(GeoId, origin = 'iso2c', destination = 'iso3c')) %>% 
+  group_by(Country) %>% arrange(Country, dateRep) %>%
+  mutate(Total_cases=cumsum(cases), Total_Deaths=cumsum(deaths), 
+         geoId = case_when(geoId=="UK"~"GB",
+                           geoId=="EL"~"GR",
+                           geoId=="PS"~"WE",
+                           geoId=="XK"~"KV",
+                           geoId=="JPG11668"~"UM",
+                           TRUE~geoId)) %>% 
+         # iso2c=case_when(geoId=="PS"~"WEB", countrycode(geoId, origin = 'iso2c', destination = 'iso3c')) %>% 
   ungroup()
 
 # download map data
@@ -142,7 +142,7 @@ world_map <- download_map_data("custom/world-palestine-highres")
 mapdata <- get_data_from_map(world_map)
 
 # select only most current data
-choroplet_data <- covid_daily_data %>%  group_by(Country) %>% arrange(desc(DateRep)) %>% 
+choroplet_data <- covid_daily_data %>%  group_by(Country) %>% arrange(desc(dateRep)) %>% 
   slice(1) %>% filter(Total_cases>0) %>% mutate(log_cases=log(Total_cases), CFR=scales::percent(Total_Deaths/Total_cases, accuracy=.01))
 
 # # define colors
@@ -157,9 +157,9 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
 # stops <- data.frame(q=rev(1-log(bins)/log(bins[length(bins)])), c=cols) %>% list_parse2(.)
 
 # plot map
-  highchart(type = "map", hc_opts = list(caption=glue::glue("<b>Number of confirmed Covid 19 cases by Country</b><br/>An up-to-date summary of daily data obtained from the European Centre for Disease Prevention and Control<br/>Data was last updated on {format(max(choroplet_data$DateRep), '%d/%m/%Y')}."))) %>%
+  highchart(type = "map", hc_opts = list(caption=glue::glue("<b>Number of confirmed Covid 19 cases by Country</b><br/>An up-to-date summary of daily data obtained from the European Centre for Disease Prevention and Control<br/>Data was last updated on {format(max(choroplet_data$dateRep), '%d/%m/%Y')}."))) %>%
     hc_add_series_map(map = world_map, df = choroplet_data,
-                      value = "log_cases", joinBy = c("iso-a2", "GeoId")) %>%
+                      value = "log_cases", joinBy = c("iso-a2", "geoId")) %>%
     hc_colorAxis(stops  = color_stops(length(bins), cols), tickPositions=log(bins), showLastLabel=FALSE, labels=list(formatter=JS("function(){ 
     var n=Math.exp(this.value);
     if (n < 1e3) return n.toFixed(0);
@@ -174,7 +174,7 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
   hc_title(text = "Number of confirmed Covid 19 cases by Country",
            margin = 40, align = "left",
            style = list(color = "#2b908f", useHTML = TRUE)) %>%
-  hc_subtitle(text = glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$DateRep), "%d/%m/%Y")})'),
+  hc_subtitle(text = glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$dateRep), "%d/%m/%Y")})'),
               align = "left",
               style = list(color = "#2b908f", fontWeight = "bold")) %>%
   hc_exporting(enabled = TRUE)
@@ -184,14 +184,14 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
 ### New Daily Cases
 ```{r timeseries_newcases}
 # find the 10 most affected countries and order them from the most affected to the least one
-most_affected_eu_data <- covid_daily_data %>% group_by(Country) %>% arrange(desc(DateRep)) %>% slice(1) %>% ungroup()  %>% arrange(desc(Total_cases)) %>% slice(1:10) %>% .$Country %>% c(., "Australia")
+most_affected_eu_data <- covid_daily_data %>% group_by(Country) %>% arrange(desc(dateRep)) %>% slice(1) %>% ungroup()  %>% arrange(desc(Total_cases)) %>% slice(1:10) %>% .$Country %>% c(., "Australia")
 
 # subset the daily data and add Australia as well
 plot_data <- covid_daily_data %>% filter(Country %in% most_affected_eu_data) %>% 
   mutate(Country=fct_reorder(factor(Country), Total_cases, .desc = TRUE)) %>% 
-  filter(DateRep>as.Date("2020-02-01"))
+  filter(dateRep>as.Date("2020-02-01"))
 # create the plot
-plot <- ggplot(plot_data, aes(x=DateRep, y=Cases, colour=Country)) +
+plot <- ggplot(plot_data, aes(x=dateRep, y=cases, colour=Country)) +
   geom_line(size=0.6) + #scale_y_log10(labels=scales::comma) +
     scale_color_paletteer_d("ggsci::springfield_simpsons") +
   labs(x="Date", y="New Confirmed Cases", title = "Daily confirmed Covid 19 cases", subtitle = "Showing 10 most affected countries + Australia") +
@@ -200,7 +200,7 @@ plot <- ggplot(plot_data, aes(x=DateRep, y=Cases, colour=Country)) +
 ggplotly(plot, width = 1000, height = 500)
 ```
 
-> `r glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$DateRep), "%d/%m/%Y")})')`
+> `r glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$dateRep), "%d/%m/%Y")})')`
 
 
 ### Disease Progress timeline
@@ -265,7 +265,7 @@ latest_data %>% group_by(`Country/Region`) %>% summarise_at(c("Confirmed", "Deat
 ### Data Sources
 
 The information presented here is sourced from data collected from a range of sources by the Johns Hopkins University Center for Systems Science and Engineering (JHU CSSE) and hosted on their [GitHub repository](https://github.com/CSSEGISandData/COVID-19) (data last updated on `r format(max(latest_data$Date), "%d/%m/%Y")`).  
-Daily data is sourced from the European Centre for Disease Prevention and Control [website](https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide) (last updated on `r format(max(choroplet_data$DateRep), "%d/%m/%Y")`)
+Daily data is sourced from the European Centre for Disease Prevention and Control [website](https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide) (last updated on `r format(max(choroplet_data$dateRep), "%d/%m/%Y")`)
 
 
 This site was compiled by Ido Bar (c) on `r format(Sys.time(), '%c')` using [Rmarkdown and flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/).  
