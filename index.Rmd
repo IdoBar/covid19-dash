@@ -252,7 +252,7 @@ latest_data %>% group_by(`Country/Region`) %>% summarise_at(c("Confirmed", "Deat
   # mutate(Mortality_rate=scales::percent(Mortality_rate, accuracy = .01)) %>% 
   DT::datatable(., colnames = c("Case Fatality Rate"="Mortality_rate"), rownames = FALSE, 
                 style = 'bootstrap', class = 'table-bordered table-condensed', 
-                caption = tab_caption,# 
+                caption = HTML(tab_caption),# 
                 options = list(pageLength = 15,
                 columnDefs = list(list(className = 'dt-center', targets = 1:4)))
                 ) %>% formatStyle('Case Fatality Rate',
