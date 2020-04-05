@@ -147,7 +147,10 @@ choroplet_data <- covid_daily_data %>%  group_by(Country) %>% arrange(desc(dateR
 
 # # define colors
 
-bins <- 10^(0:6)# c(1, 10, 100, 1000, 10000, 100000, 1000000)
+bins <- 10^(0:7)# c(1, 10, 100, 1000, 10000, 100000, 1000000)
+# seq(0,8, 1.2)
+# b <- c(500, )
+# bins <- c(rbind(a,50*a))
 cols <- as.character(paletteer_c("viridis::inferno", length(bins), direction = -1))
 stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
 # check possible solution here:
