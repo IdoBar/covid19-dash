@@ -207,7 +207,7 @@ ggplotly(plot, width = 1000, height = 500)
 
 
 ### Disease Progress timeline
-```{r bar_animation}
+```{r bar_animation, warning=FALSE, message=FALSE}
 cases_by_country <- covid_data_csse %>% group_by(`Country/Region`, Date) %>% 
  summarise_at(c("Confirmed", "Deaths", "Recovered"), ~sum(., na.rm=TRUE)) %>%  
   ungroup() %>% write_csv(glue::glue("data/csse_country_covid_data_{format(max(latest_data$Date), '%d_%m_%Y')}.csv")) %>% filter(Confirmed>0)  %>%  group_by(Date) %>% 
