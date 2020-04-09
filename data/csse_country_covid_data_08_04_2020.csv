@@ -8109,8 +8109,8 @@ Malawi,2020-04-03,3,0,0
 Malawi,2020-04-04,4,0,0
 Malawi,2020-04-05,4,0,0
 Malawi,2020-04-06,5,0,0
-Malawi,2020-04-07,8,1,0
-Malawi,2020-04-08,8,1,0
+Malawi,2020-04-07,8,0,0
+Malawi,2020-04-08,8,0,0
 Malaysia,2020-01-22,0,0,0
 Malaysia,2020-01-23,0,0,0
 Malaysia,2020-01-24,0,0,0
@@ -8334,17 +8334,17 @@ Mali,2020-03-25,2,0,0
 Mali,2020-03-26,4,0,0
 Mali,2020-03-27,11,0,0
 Mali,2020-03-28,18,0,0
-Mali,2020-03-29,18,1,0
-Mali,2020-03-30,25,2,0
-Mali,2020-03-31,28,2,0
-Mali,2020-04-01,31,3,0
-Mali,2020-04-02,36,3,0
-Mali,2020-04-03,39,3,0
-Mali,2020-04-04,41,3,1
-Mali,2020-04-05,45,5,1
-Mali,2020-04-06,47,5,9
-Mali,2020-04-07,56,5,12
-Mali,2020-04-08,59,7,16
+Mali,2020-03-29,18,0,0
+Mali,2020-03-30,25,0,0
+Mali,2020-03-31,28,0,0
+Mali,2020-04-01,31,0,0
+Mali,2020-04-02,36,0,0
+Mali,2020-04-03,39,0,0
+Mali,2020-04-04,41,0,0
+Mali,2020-04-05,45,0,0
+Mali,2020-04-06,47,0,0
+Mali,2020-04-07,56,0,0
+Mali,2020-04-08,59,0,0
 Malta,2020-01-22,0,0,0
 Malta,2020-01-23,0,0,0
 Malta,2020-01-24,0,0,0
@@ -12702,17 +12702,17 @@ Syria,2020-03-25,5,0,0
 Syria,2020-03-26,5,0,0
 Syria,2020-03-27,5,0,0
 Syria,2020-03-28,5,0,0
-Syria,2020-03-29,9,1,0
-Syria,2020-03-30,10,2,0
-Syria,2020-03-31,10,2,0
-Syria,2020-04-01,10,2,0
-Syria,2020-04-02,16,2,0
-Syria,2020-04-03,16,2,0
-Syria,2020-04-04,16,2,0
-Syria,2020-04-05,19,2,0
-Syria,2020-04-06,19,2,0
-Syria,2020-04-07,19,2,0
-Syria,2020-04-08,19,2,0
+Syria,2020-03-29,9,0,0
+Syria,2020-03-30,10,0,0
+Syria,2020-03-31,10,0,0
+Syria,2020-04-01,10,0,0
+Syria,2020-04-02,16,0,0
+Syria,2020-04-03,16,0,0
+Syria,2020-04-04,16,0,0
+Syria,2020-04-05,19,0,0
+Syria,2020-04-06,19,0,0
+Syria,2020-04-07,19,0,0
+Syria,2020-04-08,19,0,0
 Taiwan*,2020-01-22,1,0,0
 Taiwan*,2020-01-23,1,0,0
 Taiwan*,2020-01-24,3,0,0
@@ -13592,63 +13592,63 @@ United Kingdom,2020-02-08,3,0,0
 United Kingdom,2020-02-09,3,0,0
 United Kingdom,2020-02-10,8,0,0
 United Kingdom,2020-02-11,8,0,0
-United Kingdom,2020-02-12,9,0,1
-United Kingdom,2020-02-13,9,0,1
-United Kingdom,2020-02-14,9,0,1
-United Kingdom,2020-02-15,9,0,1
-United Kingdom,2020-02-16,9,0,8
-United Kingdom,2020-02-17,9,0,8
-United Kingdom,2020-02-18,9,0,8
-United Kingdom,2020-02-19,9,0,8
-United Kingdom,2020-02-20,9,0,8
-United Kingdom,2020-02-21,9,0,8
-United Kingdom,2020-02-22,9,0,8
-United Kingdom,2020-02-23,9,0,8
-United Kingdom,2020-02-24,13,0,8
-United Kingdom,2020-02-25,13,0,8
-United Kingdom,2020-02-26,13,0,8
-United Kingdom,2020-02-27,15,0,8
-United Kingdom,2020-02-28,20,0,8
-United Kingdom,2020-02-29,23,0,8
-United Kingdom,2020-03-01,36,0,8
-United Kingdom,2020-03-02,40,0,8
-United Kingdom,2020-03-03,51,0,8
-United Kingdom,2020-03-04,86,0,8
-United Kingdom,2020-03-05,116,1,8
-United Kingdom,2020-03-06,164,2,8
-United Kingdom,2020-03-07,207,2,18
-United Kingdom,2020-03-08,274,3,18
-United Kingdom,2020-03-09,322,4,18
-United Kingdom,2020-03-10,384,6,19
-United Kingdom,2020-03-11,459,8,19
-United Kingdom,2020-03-12,459,8,19
-United Kingdom,2020-03-13,802,8,19
-United Kingdom,2020-03-14,1144,21,19
-United Kingdom,2020-03-15,1145,21,19
-United Kingdom,2020-03-16,1551,56,21
-United Kingdom,2020-03-17,1960,56,53
-United Kingdom,2020-03-18,2642,72,67
-United Kingdom,2020-03-19,2716,138,67
-United Kingdom,2020-03-20,4014,178,67
-United Kingdom,2020-03-21,5067,234,67
-United Kingdom,2020-03-22,5745,282,67
-United Kingdom,2020-03-23,6726,336,67
-United Kingdom,2020-03-24,8164,423,140
-United Kingdom,2020-03-25,9640,466,140
-United Kingdom,2020-03-26,11812,580,150
-United Kingdom,2020-03-27,14745,761,151
-United Kingdom,2020-03-28,17312,1021,151
-United Kingdom,2020-03-29,19780,1231,151
-United Kingdom,2020-03-30,22453,1411,171
-United Kingdom,2020-03-31,25481,1793,179
-United Kingdom,2020-04-01,29865,2357,179
-United Kingdom,2020-04-02,34173,2926,192
-United Kingdom,2020-04-03,38689,3611,208
-United Kingdom,2020-04-04,42477,4320,215
-United Kingdom,2020-04-05,48436,4943,229
-United Kingdom,2020-04-06,52279,5385,287
-United Kingdom,2020-04-07,55949,6171,325
-United Kingdom,2020-04-08,61474,7111,345
+United Kingdom,2020-02-12,9,0,0
+United Kingdom,2020-02-13,9,0,0
+United Kingdom,2020-02-14,9,0,0
+United Kingdom,2020-02-15,9,0,0
+United Kingdom,2020-02-16,9,0,0
+United Kingdom,2020-02-17,9,0,0
+United Kingdom,2020-02-18,9,0,0
+United Kingdom,2020-02-19,9,0,0
+United Kingdom,2020-02-20,9,0,0
+United Kingdom,2020-02-21,9,0,0
+United Kingdom,2020-02-22,9,0,0
+United Kingdom,2020-02-23,9,0,0
+United Kingdom,2020-02-24,13,0,0
+United Kingdom,2020-02-25,13,0,0
+United Kingdom,2020-02-26,13,0,0
+United Kingdom,2020-02-27,15,0,0
+United Kingdom,2020-02-28,20,0,0
+United Kingdom,2020-02-29,23,0,0
+United Kingdom,2020-03-01,36,0,0
+United Kingdom,2020-03-02,40,0,0
+United Kingdom,2020-03-03,51,0,0
+United Kingdom,2020-03-04,86,0,0
+United Kingdom,2020-03-05,116,0,0
+United Kingdom,2020-03-06,164,0,0
+United Kingdom,2020-03-07,207,0,0
+United Kingdom,2020-03-08,274,0,0
+United Kingdom,2020-03-09,322,0,0
+United Kingdom,2020-03-10,384,0,1
+United Kingdom,2020-03-11,459,0,1
+United Kingdom,2020-03-12,459,0,1
+United Kingdom,2020-03-13,802,0,1
+United Kingdom,2020-03-14,1144,0,1
+United Kingdom,2020-03-15,1145,0,1
+United Kingdom,2020-03-16,1551,1,1
+United Kingdom,2020-03-17,1960,1,1
+United Kingdom,2020-03-18,2642,1,2
+United Kingdom,2020-03-19,2716,1,2
+United Kingdom,2020-03-20,4014,1,2
+United Kingdom,2020-03-21,5067,1,2
+United Kingdom,2020-03-22,5745,1,2
+United Kingdom,2020-03-23,6726,1,2
+United Kingdom,2020-03-24,8164,1,5
+United Kingdom,2020-03-25,9640,1,5
+United Kingdom,2020-03-26,11812,2,15
+United Kingdom,2020-03-27,14745,2,16
+United Kingdom,2020-03-28,17312,2,16
+United Kingdom,2020-03-29,19780,3,16
+United Kingdom,2020-03-30,22453,3,36
+United Kingdom,2020-03-31,25481,4,44
+United Kingdom,2020-04-01,29865,5,44
+United Kingdom,2020-04-02,34173,5,57
+United Kingdom,2020-04-03,38689,6,73
+United Kingdom,2020-04-04,42477,7,80
+United Kingdom,2020-04-05,48436,8,94
+United Kingdom,2020-04-06,52279,11,152
+United Kingdom,2020-04-07,55949,11,190
+United Kingdom,2020-04-08,61474,13,210
 Uruguay,2020-01-22,0,0,0
 Uruguay,2020-01-23,0,0,0
 Uruguay,2020-01-24,0,0,0
@@ -13793,14 +13793,14 @@ US,2020-03-24,53740,706,348
 US,2020-03-25,65778,942,361
 US,2020-03-26,83836,1209,681
 US,2020-03-27,101657,1581,869
-US,2020-03-28,121478,2026,1072
+US,2020-03-28,121465,2026,1072
 US,2020-03-29,140909,2467,2665
-US,2020-03-30,161837,2978,5644
+US,2020-03-30,161831,2978,5644
 US,2020-03-31,188172,3873,7024
 US,2020-04-01,213372,4757,8474
-US,2020-04-02,243616,5926,9001
+US,2020-04-02,243762,5926,9001
 US,2020-04-03,275586,7087,9707
-US,2020-04-04,308850,8407,14652
+US,2020-04-04,308853,8407,14652
 US,2020-04-05,337072,9619,17448
 US,2020-04-06,366667,10783,19581
 US,2020-04-07,396223,12722,21763
