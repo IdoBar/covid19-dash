@@ -218,7 +218,7 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
   geom_tile(aes(y=sqrt(Deaths)/2, height=sqrt(Deaths), width=0.8), fill="black", alpha=0.7) +
   geom_text(aes(y = 0, label = paste(`Country/Region`, " ")), vjust = 0.2, hjust = 1) +
   geom_text(aes(y = sqrt(Confirmed),
-                label = glue::glue('{scales::comma(Confirmed)} ({Deaths})')), hjust = 0, nudge_y = 5 ) +
+                label = glue::glue('{scales::comma(Confirmed)} ({scales::comma(Deaths)})')), hjust = 0, nudge_y = 5 ) +
 
   coord_flip(clip = "off", expand = FALSE) +
   scale_y_continuous(labels = NULL, limits = c(0, sqrt(max(cases_by_country$Confirmed))*1.4)) +
