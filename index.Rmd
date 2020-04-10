@@ -125,9 +125,9 @@ leaflet(confirmed_cases_latest) %>% addProviderTiles(providers$CartoDB.Positron,
 
 covid_daily_data <- covid_data_eu %>% 
   rename(Country=countriesAndTerritories) %>%
-  mutate(Country=str_to_title(Country)) %>%
+  mutate(Country=str_to_title(gsub("_", " ", Country))) %>%
   group_by(Country) %>% arrange(Country, dateRep) %>%
-  mutate(Total_cases=cumsum(cases), Total_Deaths=cumsum(deaths), 
+  mutate(Total_cases=cumsum(cases), Total_Deaths=cumsum(deaths), Cases_per_mill=Total_cases*1e6/(popData2018),
          geoId = case_when(geoId=="UK"~"GB",
                            geoId=="EL"~"GR",
                            geoId=="PS"~"WE",
@@ -143,7 +143,12 @@ mapdata <- get_data_from_map(world_map)
 
 # select only most current data
 choroplet_data <- covid_daily_data %>%  group_by(Country) %>% arrange(desc(dateRep)) %>% 
-  slice(1) %>% filter(Total_cases>0) %>% mutate(log_cases=log(Total_cases), CFR=scales::percent(Total_Deaths/Total_cases, accuracy=.01))
+  slice(1) %>% filter(Total_cases>0) %>% mutate(log_cases=log(Total_cases), 
+                                            CFR=scales::percent(Total_Deaths/Total_cases, accuracy=.01),
+                                            Total_cases=scales::number(Total_cases,big.mark = ","), 
+                                            Total_Deaths = scales::number(Total_Deaths,big.mark = ","), 
+                                            Cases_per_mill=scales::number(Cases_per_mill, accuracy = .01,big.mark = ","), 
+                                                pop=scales::number(popData2018,big.mark = ","))
 
 # # define colors
 
@@ -172,7 +177,7 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
     if (n >= 1e12) return +(n / 1e12).toFixed(1) + 'T';}"))) %>%
   # return Highcharts.numberFormat(Math.exp(this.value), 0, '.', ','); }"))) %>%
     hc_tooltip(useHTML=TRUE,headerFormat='',
-               pointFormat = paste0('{point.Country} confirmed cases : {point.Total_cases}<br/>Deaths: {point.Total_Deaths} (CFR {point.CFR})')) %>%
+               pointFormat = '{point.Country} confirmed cases : <span style="     border-radius: 4px; padding-right: 4px; padding-left: 4px; background-color: gold !important;" >{point.Total_cases}</span><br/>Deaths: <span style="     color: white !important;border-radius: 4px; padding-right: 4px; padding-left: 4px; background-color: orangered !important;" >{point.Total_Deaths} (CFR {point.CFR})</span><br/>Population (2018): {point.pop}<br/>Cases per million: {point.Cases_per_mill}') %>%
     hc_mapNavigation(enabled = TRUE) %>%
   hc_title(text = "Number of confirmed Covid 19 cases by Country",
            margin = 40, align = "left",
