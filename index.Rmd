@@ -177,7 +177,7 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
     if (n >= 1e12) return +(n / 1e12).toFixed(1) + 'T';}"))) %>%
   # return Highcharts.numberFormat(Math.exp(this.value), 0, '.', ','); }"))) %>%
     hc_tooltip(useHTML=TRUE,headerFormat='',
-               pointFormat = '{point.Country} confirmed cases : <span style="     border-radius: 4px; padding-right: 4px; padding-left: 4px; background-color: gold !important;" >{point.Total_cases}</span><br/>Deaths: <span style="     color: white !important;border-radius: 4px; padding-right: 4px; padding-left: 4px; background-color: orangered !important;" >{point.Total_Deaths} (CFR {point.CFR})</span><br/>Population (2018): {point.pop}<br/>Cases per million: {point.Cases_per_mill}') %>%
+               pointFormat = '{point.Country} confirmed cases : <span style="     border-radius: 4px; padding-right: 4px; padding-left: 4px; background-color: gold !important;" >{point.Total_cases}</span><br/>Deaths: <span style="     color: white !important;border-radius: 4px; padding-right: 4px; padding-left: 4px; background-color: orangered !important;" >{point.Total_Deaths} (CFR {point.CFR})</span><br/>Population (2018): <b>{point.pop}</b><br/>Cases per million: <b>{point.Cases_per_mill}</b>') %>%
     hc_mapNavigation(enabled = TRUE) %>%
   hc_title(text = "Number of confirmed Covid 19 cases by Country",
            margin = 40, align = "left",
