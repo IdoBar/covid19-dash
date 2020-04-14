@@ -28,6 +28,10 @@ process_csse_csv <- function(csvurl, datacol){
 csse_files <- c("Confirmed", "Deaths", "Recovered") 
 covid_data_csse <- csse_files %>% map(~process_csse_csv(glue::glue("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_{tolower(.x)}_global.csv"), .x)) %>% reduce(left_join) #%>%  mutate(Mortality_rate=Deaths/Confirmed)
 
+covid_us_data_files <- read_html("https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_daily_reports") %>% html_nodes("a") %>% html_attr("href") %>% .[grepl(".csv", .)] %>% 
+  gsub("blob/", "", .)
+
+covid_us_data_latest <- read_csv(paste0("https://raw.githubusercontent.com", last(covid_us_data_files)))
 # covid_data_csse <- covid_daily_csse_data %>% group_by(`Province/State`, `Country/Region`) %>% 
 #   mutate(Confirmed=cumsum(Confirmed), Deaths=cumsum(Deaths), Recovered=cumsum(Recovered)) %>% 
 #   ungroup() 
@@ -65,8 +69,8 @@ valueBox(scales::comma(sum(latest_data$Deaths, na.rm=TRUE)), icon = "ion-heart-b
 ### Average Case Fatality Rate
 
 ```{r}
-mort_rate <- sum(latest_data$Deaths, na.rm=TRUE)/sum(latest_data$Confirmed, na.rm=TRUE)
-gauge(scales::number(mort_rate*100, accuracy = .01), min = 0, max = 20, symbol = '%', gaugeSectors(
+fatal_rate <- sum(latest_data$Deaths, na.rm=TRUE)/sum(latest_data$Confirmed, na.rm=TRUE)
+gauge(scales::number(fatal_rate*100, accuracy = .01), min = 0, max = 20, symbol = '%', gaugeSectors(
   success = c(0, 2), warning = c(2, 5), danger = c(5,100)
 ))
 
@@ -82,19 +86,20 @@ Row {.tabset .tabset-fade}
 ### Map 
 
 ```{r confirmed_map_leaflet}
-confirmed_cases_latest <- latest_data %>% filter(Confirmed>0) %>% 
-  mutate(name= ifelse(is.na(`Province/State`),`Country/Region`, glue::glue('{`Province/State`} ({`Country/Region`})')),
+confirmed_cases_latest <- covid_us_data_latest %>% filter(Confirmed>0) %>% 
+  rename(lat=Lat, lon=Long_) %>% 
+  mutate(name= ifelse(is.na(Province_State),Country_Region, glue::glue('{Province_State} ({Country_Region})')),
          log_confirmed=log10(Confirmed),
-         popup_text=glue::glue('Province/Country: {name}<br/>Confirmed cases: {kableExtra::text_spec(scales::comma(Confirmed), background  = "gold")}<br/>Confirmed deaths: {kableExtra::text_spec(scales::comma(Deaths), background  = "orangered", color="white")} ({scales::percent(Deaths/Confirmed, accuracy=.1)})<br/>Confirmed recovered: {kableExtra::text_spec(scales::comma(Recovered), background  = "limegreen")}') %>% 
+         popup_text=glue::glue('<b>{Combined_Key}</b><br/>Confirmed cases: {kableExtra::text_spec(scales::comma(Confirmed), background  = "gold")}<br/>Confirmed deaths: {kableExtra::text_spec(scales::comma(Deaths), background  = "orangered", color="white")} ({scales::percent(Deaths/Confirmed, accuracy=.1)})<br/>Confirmed recovered: {kableExtra::text_spec(scales::comma(Recovered), background  = "limegreen")}') %>% 
            map(~HTML(.x)))  #%>% select(name,lat=  Lat, lon= Long, z=Confirmed)
 # Create the leaflet map
-leaflet(confirmed_cases_latest) %>% addProviderTiles(providers$CartoDB.Positron,  
+leaflet(confirmed_cases_latest, ) %>% addProviderTiles(providers$CartoDB.Positron,  
                                                       options = providerTileOptions(noWrap = TRUE, minZoom=2)) %>% # Esri.WorldStreetMap providers$CartoDB.Positron
   setView(lng = 72.1193378, lat = 9.5361877, zoom = 2) %>% # 16.7432979,29.195003,3z
-  addCircles(radius = ~(sqrt(Confirmed)*2500+50000), fillColor="#ff3030", stroke=FALSE, fillOpacity = 0.7,
+  addCircles(radius = ~(sqrt(Confirmed)*750), fillColor="#ff3030", stroke=FALSE, fillOpacity = 0.7,
                    label = ~popup_text, labelOptions = labelOptions(textOnly = FALSE, textsize = "12px")) %>% 
   # addMarkers(popup = ~Name, label = ~Name, 
-  #            icon = emojiIcons) %>% 
+  #            icon = emojiIcons) %>%  sqrt(Confirmed)*2500+50000
   addScaleBar(position = "bottomright",
               options = scaleBarOptions(imperial = FALSE)) %>%
   addEasyButton(easyButton(
@@ -189,7 +194,7 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
 
 ```
 
-### New Daily Cases
+### Daily Cases and Deaths
 ```{r timeseries_newcases}
 # find the 10 most affected countries and order them from the most affected to the least one
 most_affected_eu_data <- covid_daily_data %>% group_by(Country) %>% arrange(desc(dateRep)) %>% slice(1) %>% ungroup()  %>% arrange(desc(Total_cases)) %>% slice(1:10) %>% .$Country %>% c(., "Australia")
