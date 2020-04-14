@@ -62,7 +62,7 @@ valueBox(scales::comma(sum(latest_data$Deaths, na.rm=TRUE)), icon = "ion-heart-b
 ```
 
 
-### Mean Mortality Rate
+### Average Case Fatality Rate
 
 ```{r}
 mort_rate <- sum(latest_data$Deaths, na.rm=TRUE)/sum(latest_data$Confirmed, na.rm=TRUE)
