@@ -132,7 +132,7 @@ covid_daily_data <- covid_data_eu %>%
   rename(Country=countriesAndTerritories) %>%
   mutate(Country=str_to_title(gsub("_", " ", Country))) %>%
   group_by(Country) %>% arrange(Country, dateRep) %>%
-  mutate(Total_cases=cumsum(cases), Total_Deaths=cumsum(deaths), Cases_per_mill=Total_cases*1e6/(popData2018),
+  mutate(Total_cases=cumsum(cases), Total_Deaths=cumsum(deaths), Cases_per_mill=Total_cases*1e6/popData2019,
          geoId = case_when(geoId=="UK"~"GB",
                            geoId=="EL"~"GR",
                            geoId=="PS"~"WE",
@@ -153,7 +153,7 @@ choroplet_data <- covid_daily_data %>%  group_by(Country) %>% arrange(desc(dateR
                                             Total_cases=scales::number(Total_cases,big.mark = ","), 
                                             Total_Deaths = scales::number(Total_Deaths,big.mark = ","), 
                                             Cases_per_mill=scales::number(Cases_per_mill, accuracy = .01,big.mark = ","), 
-                                                pop=scales::number(popData2018,big.mark = ","))
+                                                pop=scales::number(popData2019,big.mark = ","))
 
 # # define colors
 
@@ -182,7 +182,7 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
     if (n >= 1e12) return +(n / 1e12).toFixed(1) + 'T';}"))) %>%
   # return Highcharts.numberFormat(Math.exp(this.value), 0, '.', ','); }"))) %>%
     hc_tooltip(useHTML=TRUE,headerFormat='',
-               pointFormat = '{point.Country} confirmed cases : <span style="     border-radius: 4px; padding-right: 4px; padding-left: 4px; background-color: gold !important;" >{point.Total_cases}</span><br/>Deaths: <span style="     color: white !important;border-radius: 4px; padding-right: 4px; padding-left: 4px; background-color: orangered !important;" >{point.Total_Deaths} (CFR {point.CFR})</span><br/>Population (2018): <b>{point.pop}</b><br/>Cases per million: <b>{point.Cases_per_mill}</b>') %>%
+               pointFormat = '{point.Country} confirmed cases : <span style="     border-radius: 4px; padding-right: 4px; padding-left: 4px; background-color: gold !important;" >{point.Total_cases}</span><br/>Deaths: <span style="     color: white !important;border-radius: 4px; padding-right: 4px; padding-left: 4px; background-color: orangered !important;" >{point.Total_Deaths} (CFR {point.CFR})</span><br/>Population (2019): <b>{point.pop}</b><br/>Cases per million: <b>{point.Cases_per_mill}</b>') %>%
     hc_mapNavigation(enabled = TRUE) %>%
   hc_title(text = "Number of confirmed Covid 19 cases by Country",
            margin = 40, align = "left",
@@ -200,7 +200,7 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
 most_affected_eu_data <- covid_daily_data %>% group_by(Country) %>% arrange(desc(dateRep)) %>% slice(1) %>% ungroup()  %>% arrange(desc(Total_cases)) %>% slice(1:10) %>% .$Country %>% c(., "Australia")
 
 # subset the daily data and add Australia as well
-plot_data <- covid_daily_data %>% filter(Country %in% most_affected_eu_data) %>% 
+plot_data <- covid_daily_data %>% filter(Country %in% most_affected_eu_data, cases>0) %>% 
   mutate(Country=fct_reorder(factor(Country), Total_cases, .desc = TRUE)) %>% 
   filter(dateRep>as.Date("2020-02-01"))
 # create the plot
@@ -246,7 +246,7 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
   
   # ease_aes('cubic-in-out') 
 
-animate(p, fps = 25, duration = 20, width = 800, height = 700, end_pause = 120)
+animate(p, fps = 25, duration = 35, width = 800, height = 700, end_pause = 200)
 ```
 
 > `r glue::glue('Data origin: <a href="https://github.com/CSSEGISandData/COVID-19">Johns Hopkins University Center for Systems Science and Engineering</a> (updated on {format(max(latest_data$Date), "%d/%m/%Y")})')`
