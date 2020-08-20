@@ -152,7 +152,7 @@ choroplet_data <- covid_daily_data %>%  group_by(Country) %>% arrange(desc(dateR
                                             CFR=scales::percent(Total_Deaths/Total_cases, accuracy=.01),
                                             Total_cases=scales::number(Total_cases,big.mark = ","), 
                                             Total_Deaths = scales::number(Total_Deaths,big.mark = ","), 
-                                            Cases_per_mill=scales::number(Cases_per_mill, accuracy = .01,big.mark = ","), 
+                            Cases_per_mill=scales::number(Cases_per_mill, accuracy = .01,big.mark = ","), 
                                                 pop=scales::number(popData2019,big.mark = ","))
 
 # # define colors
@@ -257,7 +257,8 @@ animate(p, fps = 25, duration = 35, width = 800, height = 700, end_pause = 200)
 
 ```{r latest_report_table}
 tab_caption <- glue::glue("Current status of the Covid19 pandemic (Data origin: <a href='https://github.com/CSSEGISandData/COVID-19'>Johns Hopkins University Center for Systems Science and Engineering</a>, last updated on {format(max(latest_data$Date), '%d/%m/%Y')})")
-latest_data %>% group_by(`Country/Region`) %>% summarise_at(c("Confirmed", "Deaths", "Recovered"), ~sum(.)) %>%  
+latest_data %>% group_by(`Country/Region`) %>% 
+  summarise_at(c("Confirmed", "Deaths", "Recovered"), ~sum(.)) %>%  
   mutate(Mortality_rate=Deaths/Confirmed) %>% 
   arrange(desc(Confirmed)) %>% 
   # select(`Country/Region`, Confirmed, Deaths, Recovered, Mortality_rate) %>% 
