@@ -13,17 +13,20 @@ output:
 ```{r setup, include=FALSE}
 # load custom functions
 devtools::source_gist("7f63547158ecdbacf31b54a58af0d1cc", filename = "util.R")
-pacman::p_load(flexdashboard, plotly, tidyverse, paletteer, highcharter, readxl, httr, htmltools, rvest, kableExtra, DT, leaflet, leafpm, gganimate)
+pacman::p_load(flexdashboard, plotly, tidyverse, paletteer, highcharter, readxl, httr, htmltools, rvest, 
+               kableExtra, DT, leaflet, leafpm, gganimate, ISOweek, countrycode)
 # download data from the EU
 # parse download link
-covid_eu_url <- read_html("https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide") %>% html_nodes("a") %>% html_attr("href") %>% .[grepl(".xls", .)] %>% .[1]
+# https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide
+covid_eu_url <- read_html("https://www.ecdc.europa.eu/en/publications-data/data-national-14-day-notification-rate-covid-19") %>% html_nodes("a") %>% html_attr("href") %>% .[grepl(".xls", .)] %>% .[1]
+
 # download the file to a temporary location
 GET(covid_eu_url, write_disk(tf <- tempfile(fileext = paste0(".", tools::file_ext(covid_eu_url)))))
 covid_data_eu <- readxl::read_excel(tf)
 # Download data from Josh Hopkins University (https://github.com/CSSEGISandData/COVID-19)
 process_csse_csv <- function(csvurl, datacol){
-  covid_data_csse <- read_csv(csvurl) %>% 
-  pivot_longer(cols = ends_with("/20"), names_to = "Date", values_to = datacol) %>% mutate(Date=as.Date(Date, "%m/%d/%y"))
+  return(read_csv(csvurl) %>% 
+  pivot_longer(cols = matches("/2[0-9]$"), names_to = "Date", values_to = datacol) %>% mutate(Date=as.Date(Date, "%m/%d/%y")))
 }
 csse_files <- c("Confirmed", "Deaths", "Recovered") 
 covid_data_csse <- csse_files %>% map(~process_csse_csv(glue::glue("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_{tolower(.x)}_global.csv"), .x)) %>% reduce(left_join) #%>%  mutate(Mortality_rate=Deaths/Confirmed)
@@ -90,7 +93,7 @@ confirmed_cases_latest <- covid_us_data_latest %>% filter(Confirmed>0) %>%
   rename(lat=Lat, lon=Long_) %>% 
   mutate(name= ifelse(is.na(Province_State),Country_Region, glue::glue('{Province_State} ({Country_Region})')),
          log_confirmed=log10(Confirmed),
-         popup_text=glue::glue('<b>{Combined_Key}</b><br/>Confirmed cases: {kableExtra::text_spec(scales::comma(Confirmed), background  = "gold")}<br/>Confirmed deaths: {kableExtra::text_spec(scales::comma(Deaths), background  = "orangered", color="white")} ({scales::percent(Deaths/Confirmed, accuracy=.1)})<br/>Confirmed recovered: {kableExtra::text_spec(scales::comma(Recovered), background  = "limegreen")}') %>% 
+         popup_text=glue::glue('<b>{Combined_Key}</b><br/>Confirmed cases: {kableExtra::text_spec(scales::comma(Confirmed, accuracy=1), background  = "gold")}<br/>Confirmed deaths: {kableExtra::text_spec(scales::comma(Deaths, accuracy=1), background  = "orangered", color="white")} ({scales::percent(Deaths/Confirmed, accuracy=.1)})<br/>Confirmed recovered: {kableExtra::text_spec(scales::comma(Recovered, accuracy=1), background  = "limegreen")}') %>% 
            map(~HTML(.x)))  #%>% select(name,lat=  Lat, lon= Long, z=Confirmed)
 # Create the leaflet map
 leaflet(confirmed_cases_latest, ) %>% addProviderTiles(providers$CartoDB.Positron,  
@@ -127,16 +130,35 @@ leaflet(confirmed_cases_latest, ) %>% addProviderTiles(providers$CartoDB.Positro
 ### Choroplet Map
 
 ```{r confirmed_map}
+# daily data
+# covid_daily_data <- covid_data_eu %>% 
+#   rename(Country=countriesAndTerritories) %>%
+#   mutate(Country=str_to_title(gsub("_", " ", Country))) %>%
+#   group_by(Country) %>% arrange(Country, dateRep) %>%
+#   mutate(Total_cases=cumsum(cases), Total_Deaths=cumsum(deaths), Cases_per_mill=Total_cases*1e6/popData2019,
+#          geoId = case_when(geoId=="UK"~"GB",
+#                            geoId=="EL"~"GR",
+#                            geoId=="PS"~"WE",
+#                            geoId=="XK"~"KV",
+#                            geoId=="JPG11668"~"UM",
+#                            TRUE~geoId)) %>% 
+#          # iso2c=case_when(geoId=="PS"~"WEB", countrycode(geoId, origin = 'iso2c', destination = 'iso3c')) %>% 
+#   ungroup()
 
-covid_daily_data <- covid_data_eu %>% 
-  rename(Country=countriesAndTerritories) %>%
-  mutate(Country=str_to_title(gsub("_", " ", Country))) %>%
-  group_by(Country) %>% arrange(Country, dateRep) %>%
-  mutate(Total_cases=cumsum(cases), Total_Deaths=cumsum(deaths), Cases_per_mill=Total_cases*1e6/popData2019,
-         geoId = case_when(geoId=="UK"~"GB",
+# weekly data
+covid_weekly_data <- covid_data_eu %>% 
+  rename(Country=country) %>% select(!any_of(c("weekly_count", "rate_14_day"))) %>% 
+  mutate(Country=str_to_title(gsub("_", " ", Country)),
+         dateRep = ISOweek2date(sub("-([0-9]{2})", "-W\\1-5", year_week))) %>% # 
+  pivot_wider(names_from = "indicator", values_from = cumulative_count) %>% 
+  filter(!grepl("(Total)", Country, fixed = TRUE)) %>% 
+  group_by(Country) %>% arrange(Country, dateRep) %>% # slice(1) %>% 
+  mutate(Total_cases=cases, Total_Deaths=deaths, Cases_per_mill=Total_cases*1e6/population,
+         geoId=countrycode(country_code, origin = 'iso3c', destination = 'iso2c', warn = FALSE), 
+         geoId = case_when(country_code=="XKX"~"KV",
+                           geoId=="UK"~"GB",
                            geoId=="EL"~"GR",
                            geoId=="PS"~"WE",
-                           geoId=="XK"~"KV",
                            geoId=="JPG11668"~"UM",
                            TRUE~geoId)) %>% 
          # iso2c=case_when(geoId=="PS"~"WEB", countrycode(geoId, origin = 'iso2c', destination = 'iso3c')) %>% 
@@ -147,17 +169,17 @@ world_map <- download_map_data("custom/world-palestine-highres")
 mapdata <- get_data_from_map(world_map)
 
 # select only most current data
-choroplet_data <- covid_daily_data %>%  group_by(Country) %>% arrange(desc(dateRep)) %>% 
+choroplet_data <- covid_weekly_data %>%  group_by(Country) %>% arrange(desc(dateRep)) %>% 
   slice(1) %>% filter(Total_cases>0) %>% mutate(log_cases=log(Total_cases), 
                                             CFR=scales::percent(Total_Deaths/Total_cases, accuracy=.01),
-                                            Total_cases=scales::number(Total_cases,big.mark = ","), 
-                                            Total_Deaths = scales::number(Total_Deaths,big.mark = ","), 
+                                            Total_cases=scales::comma(Total_cases, accuracy=1), 
+                                            Total_Deaths = scales::comma(Total_Deaths, accuracy=1), 
                             Cases_per_mill=scales::number(Cases_per_mill, accuracy = .01,big.mark = ","), 
-                                                pop=scales::number(popData2019,big.mark = ","))
+                                                pop=scales::comma(population, accuracy=1))
 
 # # define colors
 
-bins <- 10^(0:7)# c(1, 10, 100, 1000, 10000, 100000, 1000000)
+bins <- 10^(0:8)# c(1, 10, 100, 1000, 10000, 100000, 1000000)
 # seq(0,8, 1.2)
 # b <- c(500, )
 # bins <- c(rbind(a,50*a))
@@ -170,7 +192,7 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
 # stops <- data.frame(q=rev(1-log(bins)/log(bins[length(bins)])), c=cols) %>% list_parse2(.)
 
 # plot map
-  highchart(type = "map", hc_opts = list(caption=glue::glue("<b>Number of confirmed Covid 19 cases by Country</b><br/>An up-to-date summary of daily data obtained from the European Centre for Disease Prevention and Control<br/>Data was last updated on {format(max(choroplet_data$dateRep), '%d/%m/%Y')}."))) %>%
+  highchart(type = "map", hc_opts = list(caption=glue::glue("<b>Number of confirmed Covid 19 cases by Country</b><br/>An up-to-date summary of weekly data obtained from the European Centre for Disease Prevention and Control<br/>Data was last updated on {format(max(choroplet_data$dateRep), '%d/%m/%Y')}."))) %>%
     hc_add_series_map(map = world_map, df = choroplet_data,
                       value = "log_cases", joinBy = c("iso-a2", "geoId")) %>%
     hc_colorAxis(stops  = color_stops(length(bins), cols), tickPositions=log(bins), showLastLabel=FALSE, labels=list(formatter=JS("function(){ 
@@ -187,7 +209,7 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
   hc_title(text = "Number of confirmed Covid 19 cases by Country",
            margin = 40, align = "left",
            style = list(color = "#2b908f", useHTML = TRUE)) %>%
-  hc_subtitle(text = glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$dateRep), "%d/%m/%Y")})'),
+  hc_subtitle(text = glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/data-national-14-day-notification-rate-covid-19">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$dateRep), "%d/%m/%Y")})'),
               align = "left",
               style = list(color = "#2b908f", fontWeight = "bold")) %>%
   hc_exporting(enabled = TRUE)
@@ -197,23 +219,23 @@ stops <- data.frame(q=1:length(bins)/length(bins), c=cols) %>% list_parse2(.)
 ### Daily Cases and Deaths
 ```{r timeseries_newcases}
 # find the 10 most affected countries and order them from the most affected to the least one
-most_affected_eu_data <- covid_daily_data %>% group_by(Country) %>% arrange(desc(dateRep)) %>% slice(1) %>% ungroup()  %>% arrange(desc(Total_cases)) %>% slice(1:10) %>% .$Country %>% c(., "Australia")
+most_affected_eu_data <- covid_weekly_data %>% group_by(Country) %>% arrange(desc(dateRep)) %>% slice(1) %>% ungroup()  %>% arrange(desc(Total_cases)) %>% slice(1:10) %>% .$Country %>% c(., "Australia")
 
 # subset the daily data and add Australia as well
-plot_data <- covid_daily_data %>% filter(Country %in% most_affected_eu_data, cases>0) %>% 
+plot_data <- covid_weekly_data %>% filter(Country %in% most_affected_eu_data, cases>0) %>% 
   mutate(Country=fct_reorder(factor(Country), Total_cases, .desc = TRUE)) %>% 
   filter(dateRep>as.Date("2020-02-01"))
 # create the plot
 plot <- ggplot(plot_data, aes(x=dateRep, y=cases, colour=Country)) +
   geom_line(size=0.6) + #scale_y_log10(labels=scales::comma) +
     scale_color_paletteer_d("ggsci::springfield_simpsons") +
-  labs(x="Date", y="New Confirmed Cases", title = "Daily confirmed Covid 19 cases", subtitle = "Showing 10 most affected countries + Australia") +
+  labs(x="Date", y="New Confirmed Cases", title = "Weekly confirmed Covid 19 cases", subtitle = "Showing 10 most affected countries + Australia") +
   theme_bw(16)
 # show an interactive plot
 ggplotly(plot, width = 1000, height = 500)
 ```
 
-> `r glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$dateRep), "%d/%m/%Y")})')`
+> `r glue::glue('Data origin: <a href="https://www.ecdc.europa.eu/en/publications-data/data-national-14-day-notification-rate-covid-19">European Centre for Disease Prevention and Control</a> (updated on {format(max(choroplet_data$dateRep), "%d/%m/%Y")})')`
 
 
 ### Disease Progress timeline
@@ -228,7 +250,7 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
   geom_tile(aes(y=sqrt(Deaths)/2, height=sqrt(Deaths), width=0.8), fill="black", alpha=0.7) +
   geom_text(aes(y = 0, label = paste(`Country/Region`, " ")), vjust = 0.2, hjust = 1) +
   geom_text(aes(y = sqrt(Confirmed),
-                label = glue::glue('{scales::comma(Confirmed)} ({scales::comma(Deaths)})')), hjust = 0, nudge_y = 5 ) +
+                label = glue::glue('{scales::comma(Confirmed, accuracy=1)} ({scales::comma(Deaths, accuracy=1)})')), hjust = 0, nudge_y = 5 ) +
 
   coord_flip(clip = "off", expand = FALSE) +
   scale_y_continuous(labels = NULL, limits = c(0, sqrt(max(cases_by_country$Confirmed))*1.4)) +
@@ -246,7 +268,7 @@ p <- ggplot(cases_by_country, aes(x=rank, group=`Country/Region`)) + theme_class
   
   # ease_aes('cubic-in-out') 
 
-animate(p, fps = 25, duration = 35, width = 800, height = 700, end_pause = 200)
+animate(p, fps = 25, duration = 50, width = 800, height = 700, end_pause = 200)
 ```
 
 > `r glue::glue('Data origin: <a href="https://github.com/CSSEGISandData/COVID-19">Johns Hopkins University Center for Systems Science and Engineering</a> (updated on {format(max(latest_data$Date), "%d/%m/%Y")})')`
@@ -279,7 +301,7 @@ latest_data %>% group_by(`Country/Region`) %>%
 ### Data Sources
 
 The information presented here is sourced from data collected from a range of sources by the Johns Hopkins University Center for Systems Science and Engineering (JHU CSSE) and hosted on their [GitHub repository](https://github.com/CSSEGISandData/COVID-19) (data last updated on `r format(max(latest_data$Date), "%d/%m/%Y")`).  
-Daily data is sourced from the European Centre for Disease Prevention and Control [website](https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide) (last updated on `r format(max(choroplet_data$dateRep), "%d/%m/%Y")`)
+Weekly data is sourced from the European Centre for Disease Prevention and Control [website](https://www.ecdc.europa.eu/en/publications-data/data-national-14-day-notification-rate-covid-19) (last updated on `r format(max(choroplet_data$dateRep), "%d/%m/%Y")`)
 
 
 This site was compiled by Ido Bar (c) on `r format(Sys.time(), '%c')` using [Rmarkdown and flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/).  
